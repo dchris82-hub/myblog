@@ -10,7 +10,7 @@ This calculator computes the liquid volume in a vessel.
 {{< ad-mid >}}
 Boost your productivity with this calculation tool!
 
-# 📘 Technical Guide: Vessel Liquid Volume Calculation (Engineering-Oriented)
+# 📘 Technical Guide: Vessel Liquid Volume Calculation
 
 This calculator evaluates vessel liquid volume using a combination of **analytical geometry** and **numerical integration**, providing reliable results for **process design, sizing verification, and engineering estimation**.
 
