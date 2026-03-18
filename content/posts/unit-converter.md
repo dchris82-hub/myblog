@@ -52,7 +52,7 @@ The conversion for **Mach** in this tool is based on the speed of sound in **dry
 
 In real-world engineering, the speed of sound ($a$) is a function of the medium's temperature and properties:
 $$a = \sqrt{\gamma R T}$$
-*where $\gamma$ is the adiabatic index, $R$ is the specific gas constant, and $T$ is the absolute temperature.*
+*where \\(\gamma\\) is the adiabatic index, \\(R\\) is the specific gas constant, and \\(T\\) is the absolute temperature.*
 
 Please use the Mach conversion as a **general reference only**. For high-precision aerodynamic or fluid flow calculations (e.g., choked flow in safety valves), always calculate the local speed of sound based on your process fluid's actual temperature and composition.
 
