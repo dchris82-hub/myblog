@@ -1,0 +1,37 @@
+<div id="calculator-container" style="background: #f9f9f9; padding: 20px; border-radius: 10px; border: 1px solid #ddd; margin: 20px 0; color: #333;">
+    <h3 style="margin-top:0;">Vessel Volume Calculator (Horizontal)</h3>
+    <div style="margin-bottom: 10px;">
+        <label>Diameter (D, mm):</label><br>
+        <input type="number" id="diameter" value="2000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+    </div>
+    <div style="margin-bottom: 10px;">
+        <label>Length (L, mm):</label><br>
+        <input type="number" id="length" value="5000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+    </div>
+    <div style="margin-bottom: 20px;">
+        <label>Liquid Level (h, mm):</label><br>
+        <input type="number" id="height" value="500" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+    </div>
+    <button onclick="calculateVolume()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%;">Calculate</button>
+    
+    <div id="result" style="margin-top: 20px; font-weight: bold; font-size: 1.1em; color: #0056b3;"></div>
+</div>
+
+<script>
+function calculateVolume() {
+    const D = parseFloat(document.getElementById('diameter').value);
+    const L = parseFloat(document.getElementById('length').value);
+    const h = parseFloat(document.getElementById('height').value);
+    const r = D / 2;
+
+    if (h > D) { alert("Level cannot be greater than Diameter!"); return; }
+
+    // 공식: V = [r² * cos⁻¹((r-h)/r) - (r-h) * sqrt(2rh - h²)] * L
+    const term1 = Math.pow(r, 2) * Math.acos((r - h) / r);
+    const term2 = (r - h) * Math.sqrt(2 * r * h - Math.pow(h, 2));
+    const volume_mm3 = (term1 - term2) * L;
+    const volume_m3 = (volume_mm3 / 1e9).toFixed(3);
+
+    document.getElementById('result').innerHTML = `Current Liquid Volume: ${volume_m3} m³`;
+}
+</script>
