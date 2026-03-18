@@ -1,0 +1,139 @@
+<div id="air-receiver-container" style="background: #fdfdfd; padding: 25px; border-radius: 12px; border: 1px solid #eaeaea; margin: 25px 0; color: #2c3e50; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+    <h3 style="margin-top:0; border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #007bff;">Step 1. Air Receiver Requirement</h3>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+        <div>
+            <label style="font-weight:bold; font-size: 0.85em;">Air Temperature (°C)</label>
+            <input type="number" id="air_temp" value="35" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+        <div>
+            <label style="font-weight:bold; font-size: 0.85em;">Holding Time (min.)</label>
+            <input type="number" id="hold_time" value="5" min="0.1" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+        <div>
+            <label style="font-weight:bold; font-size: 0.85em;">Operating Pressure (kg/cm²g)</label>
+            <input type="number" id="p_op" value="7.0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+        <div>
+            <label style="font-weight:bold; font-size: 0.85em;">Min. Operating Pressure (kg/cm²g)</label>
+            <input type="number" id="p_min" value="6.0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+        <div style="grid-column: span 2;">
+            <label style="font-weight:bold; font-size: 0.85em; color:#d35400;">Air Consumption Rate (Nm³/h)</label>
+            <input type="number" id="air_rate" value="500" min="0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+    </div>
+
+    <button onclick="calcRequirement()" style="background: #007bff; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Calculate Required Volume</button>
+    
+    <div id="res-phase1" style="margin-top: 15px; padding: 15px; background: #eef2f5; border-left: 4px solid #007bff; display:none;">
+        <div id="req-vol" style="font-weight: bold; color: #2c3e50; font-size: 1.1em; margin-bottom: 10px;"></div>
+        <div style="font-size: 0.85em; color: #555; margin-bottom: 5px;">* Suggested Size (Assuming L/D = 3 & 2:1 Ellipsoidal Heads):</div>
+        <div id="req-size" style="color: #0056b3; font-weight: bold;"></div>
+    </div>
+
+    <hr style="border: 0; border-top: 1px dashed #ccc; margin: 25px 0;">
+
+    <h3 style="margin-top:0; border-bottom: 2px solid #27ae60; padding-bottom: 10px; color: #27ae60;">Step 2. Size Selection & Verification</h3>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+        <div>
+            <label style="font-weight:bold; font-size: 0.85em;">Selected Diameter (mm)</label>
+            <input type="number" id="sel_d" value="1500" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+        <div>
+            <label style="font-weight:bold; font-size: 0.85em;">Selected Straight Length (mm)</label>
+            <input type="number" id="sel_l" value="4500" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+    </div>
+
+    <button onclick="calcVerification()" style="background: #27ae60; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">Verify Selection</button>
+
+    <div id="res-phase2" style="margin-top: 15px; padding: 15px; background: #eafaf1; border-left: 4px solid #27ae60; display:none; font-size: 0.9em; line-height: 1.6;">
+        <div id="ver-vol-margin" style="font-weight: bold; font-size: 1.1em; color: #27ae60; margin-bottom: 10px; border-bottom: 1px solid #cceadd; padding-bottom: 5px;"></div>
+        <div style="display: grid; grid-template-columns: 1fr; gap: 5px;">
+            <div id="ver-r"></div>
+            <div id="ver-ini-mol"></div>
+            <div id="ver-ini-vol"></div>
+            <div id="ver-fin-mol"></div>
+            <div id="ver-fin-vol"></div>
+            <div id="ver-del-min" style="font-weight: bold; margin-top: 5px; color: #d35400;"></div>
+            <div id="ver-del-hr" style="font-weight: bold; color: #d35400;"></div>
+        </div>
+        <div style="font-size: 0.8em; color: #7f8c8d; margin-top: 10px;">* Assumptions: Compressibility factor Z=1.0, Patm=1.0332 kg/cm²a, Normal condition at 0°C & 1 atm.</div>
+    </div>
+</div>
+
+<script>
+let global_Vreq = 0;
+let user_time = 0;
+
+function calcRequirement() {
+    const T = parseFloat(document.getElementById('air_temp').value);
+    user_time = parseFloat(document.getElementById('hold_time').value);
+    const Pop = parseFloat(document.getElementById('p_op').value);
+    const Pmin = parseFloat(document.getElementById('p_min').value);
+    const Q = parseFloat(document.getElementById('air_rate').value);
+
+    if (Pop <= Pmin) { alert("Operating Pressure must be greater than Minimum Operating Pressure."); return; }
+
+    // 1. Calculate Required Volume (m3)
+    const Patm_kg = 1.0332;
+    const req_Nm3 = Q * (user_time / 60);
+    global_Vreq = req_Nm3 * (Patm_kg / (Pop - Pmin)) * ((T + 273.15) / 273.15);
+
+    // 2. Suggest Size (L/D = 3, 2:1 Ellipsoidal Heads -> V = 5*PI*D^3/6)
+    const D_req_m = Math.pow((6 * global_Vreq) / (5 * Math.PI), 1/3);
+    const D_req_mm = D_req_m * 1000;
+    const L_req_mm = D_req_mm * 3;
+
+    document.getElementById('res-phase1').style.display = "block";
+    document.getElementById('req-vol').innerHTML = `📍 Required Volume: ${global_Vreq.toFixed(3)} m³`;
+    document.getElementById('req-size').innerHTML = `Diameter (D): ${Math.ceil(D_req_mm)} mm <br> Straight Length (L): ${Math.ceil(L_req_mm)} mm`;
+    
+    // Auto-fill Phase 2
+    document.getElementById('sel_d').value = Math.ceil(D_req_mm / 100) * 100; // round up to nearest 100
+    document.getElementById('sel_l').value = Math.ceil(L_req_mm / 100) * 100;
+}
+
+function calcVerification() {
+    if (global_Vreq === 0) { alert("Please calculate Phase 1 (Requirement) first."); return; }
+
+    const D_m = parseFloat(document.getElementById('sel_d').value) / 1000;
+    const L_m = parseFloat(document.getElementById('sel_l').value) / 1000;
+    const T = parseFloat(document.getElementById('air_temp').value);
+    const Pop = parseFloat(document.getElementById('p_op').value);
+    const Pmin = parseFloat(document.getElementById('p_min').value);
+    
+    // 1. Total Volume & Margin
+    const V_sel = (Math.PI * Math.pow(D_m, 2) / 4) * L_m + (Math.PI * Math.pow(D_m, 3) / 12);
+    const margin = ((V_sel - global_Vreq) / global_Vreq) * 100;
+
+    // 2. Verification Data
+    const Patm_kg = 1.0332;
+    const P1_bar = (Pop + Patm_kg) * 0.980665;
+    const P2_bar = (Pmin + Patm_kg) * 0.980665;
+    const T_K = T + 273.15;
+    const R = 0.08314; // m3.bar/(kgmol.K)
+    const V_std = 22.414; // Nm3/kgmol
+
+    const n1 = (P1_bar * V_sel) / (R * T_K);
+    const n2 = (P2_bar * V_sel) / (R * T_K);
+    const vol1_N = n1 * V_std;
+    const vol2_N = n2 * V_std;
+    
+    const delivered = vol1_N - vol2_N;
+    const delivered_hr = delivered * (60 / user_time);
+
+    // 3. Display Results
+    document.getElementById('res-phase2').style.display = "block";
+    document.getElementById('ver-vol-margin').innerHTML = `Total Volume: ${V_sel.toFixed(3)} m³ &nbsp; | &nbsp; Margin: ${margin.toFixed(1)}%`;
+    document.getElementById('ver-r').innerHTML = `Universal Gas Constant (R): <b>0.08314</b> m³·bar/(kgmol·K)`;
+    document.getElementById('ver-ini-mol').innerHTML = `Initial Mol in Receiver: <b>${n1.toFixed(3)}</b> kgmol`;
+    document.getElementById('ver-ini-vol').innerHTML = `Initial Volume in Receiver: <b>${vol1_N.toFixed(2)}</b> Nm³`;
+    document.getElementById('ver-fin-mol').innerHTML = `Final Mol in Receiver: <b>${n2.toFixed(3)}</b> kgmol`;
+    document.getElementById('ver-fin-vol').innerHTML = `Final Volume in Receiver: <b>${vol2_N.toFixed(2)}</b> Nm³`;
+    document.getElementById('ver-del-min').innerHTML = `🔥 Delivered Air: ${delivered.toFixed(2)} Nm³ / ${user_time} min.`;
+    document.getElementById('ver-del-hr').innerHTML = `🔥 Delivered Air Rate: ${delivered_hr.toFixed(2)} Nm³/h`;
+}
+</script>
