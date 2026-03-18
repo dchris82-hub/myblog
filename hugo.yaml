@@ -1,0 +1,9 @@
+baseURL: "https://bydeji.com"
+languageCode: "ko-kr"
+title: "ByDeji's Blog"
+theme: "PaperMod"
+
+params:
+  env: production
+  title: ByDeji
+  description: "My Personal Blog"
