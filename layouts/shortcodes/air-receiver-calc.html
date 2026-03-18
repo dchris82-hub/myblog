@@ -125,9 +125,20 @@ function calcVerification() {
     const delivered = vol1_N - vol2_N;
     const delivered_hr = delivered * (60 / user_time);
 
-    // 3. Display Results
+    // 🌟 3. 경고 메시지 로직 (Margin < 0 일 경우) 🌟
+    let warningMsg = "";
+    let marginColor = "#27ae60"; // 기본 녹색
+    
+    if (margin < 0) {
+        warningMsg = `<div style="background: #ffebe6; color: #e74c3c; padding: 10px; border-radius: 5px; margin-bottom: 12px; border-left: 4px solid #e74c3c; font-size: 0.95em;">
+                        <b>⚠️ WARNING:</b> Selected volume is smaller than the required volume. Please increase the vessel size.
+                      </div>`;
+        marginColor = "#e74c3c"; // 마진 퍼센트 글씨도 빨간색으로 변경
+    }
+
+    // 4. Display Results
     document.getElementById('res-phase2').style.display = "block";
-    document.getElementById('ver-vol-margin').innerHTML = `Total Volume: ${V_sel.toFixed(3)} m³ &nbsp; | &nbsp; Margin: ${margin.toFixed(1)}%`;
+    document.getElementById('ver-vol-margin').innerHTML = `${warningMsg}Total Volume: ${V_sel.toFixed(3)} m³ &nbsp; | &nbsp; <span style="color: ${marginColor}">Margin: ${margin.toFixed(1)}%</span>`;
     document.getElementById('ver-r').innerHTML = `Universal Gas Constant (R): <b>0.08314</b> m³·bar/(kgmol·K)`;
     document.getElementById('ver-ini-mol').innerHTML = `Initial Mol in Receiver: <b>${n1.toFixed(3)}</b> kgmol`;
     document.getElementById('ver-ini-vol').innerHTML = `Initial Volume in Receiver: <b>${vol1_N.toFixed(2)}</b> Nm³`;
