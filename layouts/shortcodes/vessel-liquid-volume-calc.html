@@ -6,7 +6,7 @@
             <label style="font-weight:bold; font-size: 0.85em;">Orientation</label>
             <select id="orientation" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
                 <option value="horizontal">Horizontal</option>
-                <option value="vertical">Vertical (Bottom + Shell + Top)</option>
+                <option value="vertical">Vertical (Level from Bottom TL)</option>
             </select>
         </div>
         <div>
@@ -25,18 +25,18 @@
             <input type="number" id="diameter" value="2000" min="1" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
         </div>
         <div>
-            <label style="font-weight:bold; font-size: 0.85em;">Straight Length, Tan-to-Tan (L, mm)</label>
+            <label style="font-weight:bold; font-size: 0.85em;">Straight Length, TL-TL (L, mm)</label>
             <input type="number" id="length" value="5000" min="0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
         </div>
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
         <div>
-            <label style="font-weight:bold; font-size: 0.85em; color: #e74c3c;">Low Liquid Level (LLL, mm)</label>
+            <label id="lll-label" style="font-weight:bold; font-size: 0.85em; color: #e74c3c;">Low Liquid Level (LLL, mm)</label>
             <input type="number" id="lll" value="200" min="0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
         </div>
         <div>
-            <label style="font-weight:bold; font-size: 0.85em; color: #27ae60;">High Liquid Level (HLL, mm)</label>
+            <label id="hll-label" style="font-weight:bold; font-size: 0.85em; color: #27ae60;">High Liquid Level (HLL, mm)</label>
             <input type="number" id="hll" value="1800" min="0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
         </div>
     </div>
@@ -82,25 +82,21 @@ function getHeadFullVolume(D, headType) {
     return 0;
 }
 
-// Area of horizontal slice through head at axial location x from tangent line
-// x: 0 at tangent line, x: a at pole
+// Area of head cross-section at axial location x from tangent line
 function headCrossSectionAreaAtX(x, D, headType) {
     const r = D / 2;
     const a = getHeadDepth(D, headType);
+
     if (headType === "flat" || a <= 0) return 0;
 
     const xx = clamp(x, 0, a);
 
     if (headType === "hemi") {
-        // Sphere radius r, tangent plane located at x=0, pole at x=r
-        // cross-sectional radius^2 = r^2 - (r - x)^2 = 2rx - x^2
         const rr2 = Math.max(0, 2 * r * xx - xx * xx);
         return Math.PI * rr2;
     }
 
     if (headType === "ellip") {
-        // Ideal half-ellipsoid: x^2/a^2 + y^2/r^2 + z^2/r^2 = 1
-        // cross-sectional radius^2 = r^2 * (1 - x^2/a^2)
         const rr2 = Math.max(0, r * r * (1 - (xx * xx) / (a * a)));
         return Math.PI * rr2;
     }
@@ -108,13 +104,12 @@ function headCrossSectionAreaAtX(x, D, headType) {
     return 0;
 }
 
-// Radius of head cross-section circle at axial location x
 function headRadiusAtX(x, D, headType) {
     const area = headCrossSectionAreaAtX(x, D, headType);
     return Math.sqrt(area / Math.PI);
 }
 
-// Numerical integration for horizontal head liquid volume for one head
+// Numerical integration for one horizontal head
 function horizontalOneHeadVolume(h, D, headType, n = 400) {
     const a = getHeadDepth(D, headType);
     if (headType === "flat" || a <= 0) return 0;
@@ -135,65 +130,47 @@ function horizontalOneHeadVolume(h, D, headType, n = 400) {
     return vol;
 }
 
-// Partial volume in one bottom head for vertical vessel, height y measured from head bottom
-function verticalBottomHeadPartial(y, D, headType) {
-    const r = D / 2;
-    const b = getHeadDepth(D, headType);
-
-    if (headType === "flat" || b <= 0) return 0;
-
-    const yy = clamp(y, 0, b);
-
-    // Ideal hemi / ideal 2:1 ellipsoidal bottom head
-    return Math.PI * r * r / (b * b) * (b * yy * yy - Math.pow(yy, 3) / 3);
-}
-
-function getMaxHeight(D, L, orientation, headType) {
-    if (orientation === "horizontal") return D;
-
-    const headH = getHeadDepth(D, headType);
-    if (headType === "flat") return L;
-    return L + 2 * headH;
-}
-
 function getVolAtH(h, D, L, orientation, headType) {
     const r = D / 2;
-    const maxH = getMaxHeight(D, L, orientation, headType);
-    const currentH = clamp(h, 0, maxH);
-
     let vol = 0;
 
     if (orientation === "horizontal") {
-        // Cylinder
+        // Physical range for horizontal level: 0 ~ D
+        const currentH = h;
+
         const cylArea = circleSegmentArea(currentH, r);
         vol += cylArea * L;
 
-        // Two identical heads, numerical integration
         if (headType !== "flat") {
             vol += 2 * horizontalOneHeadVolume(currentH, D, headType);
         }
     } else {
-        const headH = getHeadDepth(D, headType);
-        const oneHeadFull = getHeadFullVolume(D, headType);
-        const shellFull = Math.PI * r * r * L;
+        // Vertical level is defined only between bottom TL and top TL
+        // h = 0 at bottom tangent line
+        // h = L at top tangent line
+        const currentH = h;
 
-        if (headType === "flat") {
-            vol = Math.PI * r * r * currentH;
-        } else if (currentH <= headH) {
-            // Bottom head only
-            vol = verticalBottomHeadPartial(currentH, D, headType);
-        } else if (currentH <= headH + L) {
-            // Bottom head + part of shell
-            vol = oneHeadFull + Math.PI * r * r * (currentH - headH);
-        } else {
-            // Bottom head + full shell + part of top head
-            const filledInTop = currentH - headH - L; // 0 ~ headH
-            // By symmetry, filled volume in top head from bottom side is same partial formula
-            vol = oneHeadFull + shellFull + verticalBottomHeadPartial(filledInTop, D, headType);
-        }
+        const bottomHeadVol = getHeadFullVolume(D, headType);
+        const shellVol = Math.PI * r * r * currentH;
+
+        vol = bottomHeadVol + shellVol;
     }
 
     return vol / 1e9; // mm3 -> m3
+}
+
+function updateLevelLabels() {
+    const orientation = document.getElementById('orientation').value;
+    const lllLabel = document.getElementById('lll-label');
+    const hllLabel = document.getElementById('hll-label');
+
+    if (orientation === "vertical") {
+        lllLabel.textContent = "Low Liquid Level from Bottom TL (LLL, mm)";
+        hllLabel.textContent = "High Liquid Level from Bottom TL (HLL, mm)";
+    } else {
+        lllLabel.textContent = "Low Liquid Level (LLL, mm)";
+        hllLabel.textContent = "High Liquid Level (HLL, mm)";
+    }
 }
 
 function calculateVessel() {
@@ -229,28 +206,52 @@ function calculateVessel() {
         return;
     }
 
-    const maxH = getMaxHeight(D, L, orientation, headType);
-    const hllUsed = clamp(hll, 0, maxH);
-    const lllUsed = clamp(lll, 0, maxH);
+    if (orientation === "horizontal") {
+        if (lll > D || hll > D) {
+            alert("For a horizontal vessel, liquid levels must be between 0 and D.");
+            return;
+        }
+    }
 
-    const volHLL = getVolAtH(hllUsed, D, L, orientation, headType);
-    const volLLL = getVolAtH(lllUsed, D, L, orientation, headType);
+    if (orientation === "vertical") {
+        if (lll > L || hll > L) {
+            alert("For a vertical vessel, liquid levels must be between 0 and L (TL-to-TL range).");
+            return;
+        }
+    }
+
+    const volHLL = getVolAtH(hll, D, L, orientation, headType);
+    const volLLL = getVolAtH(lll, D, L, orientation, headType);
     const effectiveVol = volHLL - volLLL;
 
-    const note = [
-        "L is treated as straight cylindrical tangent-to-tangent length.",
-        headType === "ellip" ? "2:1 ellipsoidal head is modeled as an ideal half-ellipsoid." : "",
-        orientation === "horizontal" && headType !== "flat" ? "Horizontal head volume is evaluated by numerical integration." : ""
-    ].filter(Boolean).join(" ");
+    const note = [];
+
+    if (orientation === "horizontal") {
+        note.push("Horizontal vessel liquid level must be within 0 to D.");
+        note.push("L is treated as straight cylindrical tangent-to-tangent length.");
+        if (headType === "ellip") {
+            note.push("2:1 ellipsoidal head is modeled as an ideal half-ellipsoid.");
+        }
+        if (headType !== "flat") {
+            note.push("Horizontal head volume is evaluated by numerical integration.");
+        }
+    } else {
+        note.push("Vertical vessel liquid level is defined from bottom tangent line to top tangent line only (0 to L).");
+        note.push("Bottom head full volume is included in all vertical results.");
+        note.push("Top head volume is not included in the vertical level range.");
+        if (headType === "ellip") {
+            note.push("2:1 ellipsoidal head is modeled as an ideal half-ellipsoid.");
+        }
+    }
 
     document.getElementById('result-box').style.display = "block";
-    document.getElementById('res-info').innerHTML = `
-        Max allowable level used in calculation: <b>${maxH.toFixed(1)} mm</b><br>
-        ${note}
-    `;
+    document.getElementById('res-info').innerHTML = note.join("<br>");
     document.getElementById('res-total').innerHTML =
         `📍 Volume at HLL: <span style="color:#007bff">${volHLL.toFixed(4)} m³</span>`;
     document.getElementById('res-effective').innerHTML =
         `✅ Effective Volume (HLL - LLL): <span style="color:#27ae60">${effectiveVol.toFixed(4)} m³</span>`;
 }
+
+document.getElementById('orientation').addEventListener('change', updateLevelLabels);
+updateLevelLabels();
 </script>
