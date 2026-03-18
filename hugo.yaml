@@ -8,5 +8,4 @@ params:
   title: ByDeji
   description: "My Personal Blog"
   assets:
-    favicon: "/favicon.ico"
-    apple_touch_icon: "/apple-touch-icon.png"
+    favicon: "/favicon.png"
