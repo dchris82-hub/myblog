@@ -50,4 +50,3 @@ Standard conversions for **Length**, **Area**, **Volume**, **Mass**, and **Veloc
 
 ---
 
-**Would you like me to include additional dimensions such as Enthalpy ($kJ/kg$) or Specific Heat Capacity ($kJ/kg\cdot K$)?**
