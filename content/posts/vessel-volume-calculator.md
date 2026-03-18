@@ -10,4 +10,54 @@ This calculator computes the liquid volume in a vessel.
 
 Boost your productivity with this calculation tool!
 
-📘 Technical Guide: Vessel Liquid Volume CalculationAccurate vessel volume calculation is more than just a mathematical exercise; it is a critical component of process design. Engineers rely on these values to determine pump NPSH requirements, residence time, and Safety Instrumented System (SIS) setpoints.1. Orientation: Vertical vs. HorizontalThe calculation method changes significantly depending on the vessel's orientation:Vertical Vessels: The liquid volume increases linearly with the liquid level ($h$) within the cylindrical section, making it relatively straightforward.Horizontal Vessels: As the liquid level rises, the cross-sectional area changes following a circular segment geometry. This requires non-linear trigonometric calculations.2. Impact of Head Types on VolumeThe heads (ends) of a vessel contribute significantly to the total volume. The most common types include:2:1 Ellipsoidal Head: The most standard industrial choice. Its depth is 1/4 of the diameter ($D$). The volume of one 2:1 ellipsoidal head is exactly half that of a hemispherical head of the same diameter.$$V_{ellip} = \frac{\pi D^3}{24}$$Hemispherical Head: A full half-sphere. While it provides the best pressure resistance, it requires more space.$$V_{hemi} = \frac{2}{3}\pi r^3$$Flat Head: A simple flat plate. It adds zero additional volume to the vessel's straight length.3. Mathematical Formula for Horizontal VesselsFor a horizontal cylindrical section, the volume ($V_{cyl}$) at a given liquid level ($h$) is calculated by determining the area of the wetted circular segment:$$V_{cyl} = \left[ r^2 \cos^{-1}\left(\frac{r-h}{r}\right) - (r-h)\sqrt{2rh - h^2} \right] \times L$$This represents the cross-sectional wetted area multiplied by the Tan-to-Tan length ($L$) of the vessel. The total volume is then adjusted by adding the wetted volume of the chosen head types at that specific height.4. Operational Levels: LLL, HLL, and Effective VolumeIn engineering design, the Effective Liquid Volume is the most crucial metric for operation.LLL (Low Liquid Level): The minimum level required to prevent pump cavitation and vortex formation. Operation usually maintains levels above this point.HLL (High Liquid Level): The maximum operating level designed to prevent overflow and ensure adequate vapor space at the top.Effective Volume ($V_{eff}$): The actual usable capacity between the operational limits:$$V_{eff} = V_{HLL} - V_{LLL}$$Pro Tip: When designing, always ensure that the volume between LLL and HLL provides sufficient Surge Time (the time available before a level alarm or trip occurs) based on your process flow rates.
+## 📘 Technical Guide: Vessel Liquid Volume Calculation
+
+Accurate vessel volume calculation is more than just a mathematical exercise; it is a critical component of process design. 
+
+Engineers rely on these values to determine pump NPSH requirements, residence time, and Safety Instrumented System (SIS) setpoints.
+
+---
+
+### 1. Orientation: Vertical vs. Horizontal
+
+The calculation method changes significantly depending on the vessel's orientation:
+
+* **Vertical Vessels:** The liquid volume increases linearly with the liquid level ($h$) within the cylindrical section, making it relatively straightforward.
+* **Horizontal Vessels:** As the liquid level rises, the cross-sectional area changes following a **circular segment** geometry. This requires non-linear trigonometric calculations.
+
+---
+
+### 2. Impact of Head Types on Volume
+
+The heads (ends) of a vessel contribute significantly to the total volume. The most common types include:
+
+* **2:1 Ellipsoidal Head:** The most standard industrial choice. Its depth is 1/4 of the diameter ($D$). The volume of one 2:1 ellipsoidal head is exactly half that of a hemispherical head of the same diameter.
+$$V_{ellip} = \frac{\pi D^3}{24}$$
+
+* **Hemispherical Head:** A full half-sphere. While it provides the best pressure resistance, it requires more space.
+$$V_{hemi} = \frac{2}{3}\pi r^3$$
+
+* **Flat Head:** A simple flat plate. It adds zero additional volume to the vessel's straight length.
+
+---
+
+### 3. Mathematical Formula for Horizontal Vessels
+
+For a horizontal cylindrical section, the volume ($V_{cyl}$) at a given liquid level ($h$) is calculated by determining the area of the wetted circular segment:
+
+$$V_{cyl} = \left[ r^2 \cos^{-1}\left(\frac{r-h}{r}\right) - (r-h)\sqrt{2rh - h^2} \right] \times L$$
+
+This represents the cross-sectional wetted area multiplied by the Tan-to-Tan length ($L$) of the vessel. The total volume is then adjusted by adding the wetted volume of the chosen head types at that specific height.
+
+---
+
+### 4. Operational Levels: LLL, HLL, and Effective Volume
+
+In engineering design, the **Effective Liquid Volume** is the most crucial metric for operation.
+
+* **LLL (Low Liquid Level):** The minimum level required to prevent pump cavitation and vortex formation. Operation usually maintains levels above this point.
+* **HLL (High Liquid Level):** The maximum operating level designed to prevent overflow and ensure adequate vapor space at the top.
+* **Effective Volume ($V_{eff}$):** The actual usable capacity between the operational limits:
+$$V_{eff} = V_{HLL} - V_{LLL}$$
+
+> **Pro Tip:** When designing, always ensure that the volume between LLL and HLL provides sufficient **Surge Time** (the time available before a level alarm or trip occurs) based on your process flow rates.
