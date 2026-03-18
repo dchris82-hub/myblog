@@ -4,7 +4,7 @@ date: 2026-03-18
 tags: ["Engineering", "Tools", "Utility"]
 ---
 
-이 계산기는 공정 설계 시 필수적인 **공기 저장조(Air Receiver Vessel)의 용량을 산정**하고, 선택한 베셀 크기의 **적절성을 열역학적으로 검증**하는 2단계(Two-Step) 전문가용 도구입니다.
+This professional-grade, two-step utility provides a comprehensive solution for sizing air receiver vessels in process design. It is engineered to first determine the precise required volume based on process demand and subsequently verify the thermodynamic adequacy of the selected vessel dimensions.
 
 **Design your utility systems with confidence and precision.**
 
