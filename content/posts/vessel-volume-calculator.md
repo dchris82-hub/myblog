@@ -20,61 +20,82 @@ This calculator evaluates vessel liquid volume using a combination of **analytic
 
 In this tool, **Length ($L$)** is defined as:
 
-> **Straight Cylindrical Length (Tangent-to-Tangent, T/T)**
+> **Straight Cylindrical Length (Tangent-to-Tangent, TL–TL)**
 
-- This represents only the cylindrical shell length.
-- The **total internal vessel height/length** is:
-
-$$
-\text{Total Length} = L + 2 \times \text{Head Depth}
-$$
-
-### Head Depth
-- **Hemispherical head:** $D/2$
-- **2:1 Ellipsoidal head:** $D/4$
-- **Flat head:** $0$
+- This represents the distance between the **bottom tangent line** and **top tangent line**.
+- Liquid level for vertical vessels is defined strictly within this range.
 
 ---
 
-## 2. Head Geometry Modeling
+## 2. Liquid Level Definition
 
-### 2.1 Hemispherical Head
+### 2.1 Horizontal Vessel
+- Liquid level is measured from the **lowest internal point of the vessel**
+- Valid range:
+
+$$
+0 \le h \le D
+$$
+
+---
+
+### 2.2 Vertical Vessel
+
+Liquid level is defined as:
+
+> **Distance from Bottom Tangent Line (TL)**
+
+- $h = 0$ → Bottom tangent line  
+- $h = L$ → Top tangent line  
+
+Valid range:
+
+$$
+0 \le h \le L
+$$
+
+> ⚠️ Liquid levels outside this range are considered **physically invalid** and are rejected.
+
+---
+
+## 3. Head Geometry Modeling
+
+### 3.1 Hemispherical Head
 - Modeled as a **true hemisphere**
-- Volume and partial volume follow exact spherical geometry
+- Exact geometric relationships are used
 
 ---
 
-### 2.2 2:1 Ellipsoidal Head
+### 3.2 2:1 Ellipsoidal Head
 
-The 2:1 ellipsoidal head is modeled as:
+Modeled as:
 
 > **Ideal half-ellipsoid (semi-ellipsoid)**
 
 - Semi-axes:
-  - Horizontal radius: $r = D/2$
-  - Vertical depth: $a = D/4$
+  - Radius: $r = D/2$
+  - Depth: $a = D/4$
 
-- Full head volume:
+Full head volume:
 
 $$
 V = \frac{\pi D^3}{24}
 $$
 
-> ⚠️ **Note:**  
-> This is an ideal geometric model.  
-> Real fabricated heads (e.g., ASME F&D) include knuckle regions and may differ slightly.
+> ⚠️ This is an idealized model.  
+> Real heads (e.g., ASME F&D) include knuckle regions and may differ slightly.
 
 ---
 
-### 2.3 Flat Head
-- Assumed to have **zero internal volume contribution**
-- Used for simplified cylindrical vessels
+### 3.3 Flat Head
+- Assumed to have **zero internal volume**
+- Used for simplified geometry
 
 ---
 
-## 3. Horizontal Vessel Calculation
+## 4. Horizontal Vessel Calculation
 
-For horizontal vessels, total volume is calculated as:
+Total volume is calculated as:
 
 $$
 V = V_{\text{cylinder}} + V_{\text{heads}}
@@ -82,132 +103,123 @@ $$
 
 ---
 
-### 3.1 Cylindrical Section
+### 4.1 Cylindrical Section
 
-The liquid volume in the cylindrical section is calculated using the **circular segment method**:
-
+- Calculated using the **circular segment method**
 - Based on liquid height $h$
-- Uses trigonometric segment area formula
 
 ---
 
-### 3.2 Head Sections (Numerical Integration)
+### 4.2 Head Sections
 
-Unlike simplified approaches, head volumes are computed using:
+Head volumes are calculated using:
 
-> **Numerical integration along the head axis**
+> **Numerical integration**
 
-Procedure:
-1. The head is discretized along its axial direction
-2. At each location:
-   - Local radius is determined from geometry
-   - Liquid-filled cross-sectional area is computed
-3. Volume is obtained by integrating these areas
+Method:
+1. Head geometry is discretized along its axis
+2. Local radius is determined at each slice
+3. Circular segment area is computed
+4. Volume is integrated over the head depth
 
-This method is applied to:
+This approach is applied to:
 - Hemispherical heads
 - 2:1 ellipsoidal heads
 
-> ✔ This approach avoids inaccuracies associated with closed-form approximations for partially filled horizontal heads.
+---
+
+## 5. Vertical Vessel Calculation (TL–TL Basis)
+
+For vertical vessels, the liquid level is **restricted to the cylindrical shell region only**.
+
+### Key Principle
+
+> **Bottom head volume is always fully included**  
+> **Top head volume is excluded from the level range**
 
 ---
 
-## 4. Vertical Vessel Calculation
+### Volume Calculation
 
-Vertical vessels are divided into three regions:
-
----
-
-### 4.1 Bottom Head Zone ($0 \le h \le \text{Head Depth}$)
-
-The volume is calculated using the **partial volume of a rotational solid**:
+For any level $h$:
 
 $$
-V = \frac{\pi r^2}{b^2} \left( b h^2 - \frac{h^3}{3} \right)
+V(h) = V_{\text{bottom head}} + \pi r^2 h
 $$
 
 Where:
 - $r = D/2$
-- $b =$ head depth
+- $h$ is measured from bottom tangent line
 
 ---
 
-### 4.2 Cylindrical Shell Zone
+### Interpretation
 
-For liquid levels within the cylindrical section:
-
-$$
-V = V_{\text{bottom head}} + \pi r^2 (h - b)
-$$
-
----
-
-### 4.3 Top Head Zone
-
-When liquid enters the top head:
-
-$$
-V = V_{\text{bottom head}} + V_{\text{shell}} + V_{\text{top head (partial)}}
-$$
-
-Due to geometric symmetry:
-- The **top head partial volume** is calculated using the same formulation as the bottom head.
+| Region | Included |
+|------|--------|
+| Bottom head | ✔ Fully included |
+| Cylindrical shell | ✔ Partially filled |
+| Top head | ❌ Not included |
 
 ---
 
-## 5. Numerical Stability & Validation
+## 6. Validation & Numerical Stability
 
-To ensure robust calculations:
+### 6.1 Input Validation
 
-### 5.1 Domain Clamping
-- Prevents invalid values in:
-  - $\arccos$
-  - square root
-- Ensures inputs remain within valid geometric bounds
-
----
-
-### 5.2 Input Validation
 The following conditions are enforced:
+
 - $D > 0$
 - $L \ge 0$
 - $LLL \ge 0$, $HLL \ge 0$
 - $HLL > LLL$
 
+Additional constraints:
+
+- Horizontal:
+  $$
+  h \le D
+  $$
+- Vertical:
+  $$
+  h \le L
+  $$
+
+Invalid inputs result in **calculation rejection (no clamping applied)**.
+
 ---
 
-### 5.3 Height Limitation
-Liquid height is automatically limited to the physically valid maximum:
+### 6.2 Numerical Stability
 
-- **Horizontal vessel:** $0 \le h \le D$
-- **Vertical vessel:**
-  - Flat: $L$
-  - Ellipsoidal: $L + D/2$
-  - Hemispherical: $L + D$
+To ensure robust calculations:
+
+- Trigonometric inputs are limited to valid domains
+- Square root arguments are prevented from becoming negative
+- Numerical integration uses stable discretization
 
 ---
 
-## 6. Modeling Assumptions
+## 7. Modeling Assumptions
 
 This calculator is based on the following assumptions:
 
-- Identical head type on both ends
+- Identical head types on both ends
 - No internal structures (trays, baffles, agitators)
 - No nozzle or piping volume included
-- No corrosion allowance or wall thickness correction
-- Pure geometric (volume-only) calculation
-- Ellipsoidal head treated as **ideal half-ellipsoid**
+- No wall thickness or corrosion allowance applied
+- Pure geometric volume calculation
+- Ellipsoidal heads modeled as **ideal half-ellipsoids**
 
 ---
 
-## 7. Applicability
+## 8. Applicability
 
 This tool is suitable for:
 
-- Vessel sizing checks
+- Vessel sizing verification
 - Surge volume estimation
-- Hold-up volume estimation
-- Process design verification
+- Hold-up volume calculation
+- Process engineering checks
 
 ---
 
@@ -215,8 +227,8 @@ This tool is suitable for:
 
 This calculator provides **engineering-level estimation**.
 
-For final design and procurement:
-- Always verify against **vendor drawings**
+For final design:
+- Verify with **vendor drawings**
 - Confirm with **mechanical design calculations**
 - Consider fabrication tolerances and internal components
 
