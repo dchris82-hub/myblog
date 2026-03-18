@@ -27,7 +27,7 @@ The required volume ($V_{req}$) is determined by the maximum allowable pressure 
 $$V_{req} = Q_{req\_N} \times \frac{P_{atm}}{P_1 - P_2} \times \frac{T + 273.15}{273.15}$$
 
 * $Q_{req\_N}$: Total air consumption during the holding time ($Nm^3$)
-* $P_1, P_2$: Operating and minimum acceptable pressures ($kg/cm^2g$)
+* $P_1, P_2$: Operating and minimum acceptable pressures ($kg/cm^2a$)
 * $P_{atm}$: Standard atmospheric pressure ($1.0332 \, kg/cm^2a$)
 * $T$: Operating temperature ($^\circ C$)
 
@@ -41,7 +41,7 @@ Once the dimensions are selected, the tool validates the actual delivered capaci
 
 $$P V = n R T$$
 
-* **R (Universal Gas Constant):** $0.08314 \, m^3\cdot bar / (kgmol\cdot K)$
+* **R (Universal Gas Constant):** $0.08478 \, m^3\cdot kg/cm^2 / (kgmol\cdot K)$
 * **Initial & Final Moles ($n_1, n_2$):** Calculated based on the selected volume ($V_{sel}$) at $P_1$ and $P_2$.
 * **Delivered Air:** The difference in moles ($\Delta n = n_1 - n_2$) is converted back to Normal cubic meters ($Nm^3$) to verify if the selected vessel meets the required consumption rate.
 
