@@ -1,0 +1,112 @@
+<div id="unit-converter-container" style="background: #fdfdfd; padding: 25px; border-radius: 12px; border: 1px solid #eaeaea; margin: 25px 0; color: #2c3e50; font-family: 'Segoe UI', sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+    <h3 style="margin-top:0; border-bottom: 2px solid #34495e; padding-bottom: 10px; color: #34495e;">Engineering Unit Converter</h3>
+    
+    <div style="margin-bottom: 15px;">
+        <label style="font-weight:bold; font-size: 0.85em;">Select Dimension</label>
+        <select id="prop-select" onchange="updateUnits()" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: white;">
+            <option value="length">Length</option>
+            <option value="area">Area</option>
+            <option value="volume">Volume</option>
+            <option value="mass">Mass</option>
+            <option value="pressure">Pressure</option>
+            <option value="temperature">Temperature</option>
+            <option value="energy">Energy</option>
+            <option value="power">Power</option>
+            <option value="velocity">Velocity</option>
+            <option value="mass_flow">Mass Flow Rate</option>
+            <option value="vol_flow">Volumetric Flow Rate</option>
+            <option value="viscosity">Viscosity (Dynamic)</option>
+        </select>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+        <div>
+            <label style="font-weight:bold; font-size: 0.85em;">Value</label>
+            <input type="number" id="from-value" value="1" oninput="convert()" style="width: 100%; padding: 9px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+        <div>
+            <label style="font-weight:bold; font-size: 0.85em;">From Unit</label>
+            <select id="from-unit" onchange="convert()" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;"></select>
+        </div>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <label style="font-weight:bold; font-size: 0.85em;">To Unit</label>
+        <select id="to-unit" onchange="convert()" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;"></select>
+    </div>
+
+    <div id="converter-result" style="padding: 20px; background: #34495e; color: white; border-radius: 8px; text-align: center;">
+        <div style="font-size: 0.9em; opacity: 0.8; margin-bottom: 5px;">Result</div>
+        <div id="res-val" style="font-size: 1.8em; font-weight: bold;">-</div>
+    </div>
+</div>
+
+<script>
+const unitData = {
+    length: { m: 1, mm: 0.001, cm: 0.01, km: 1000, in: 0.0254, ft: 0.3048 },
+    area: { m2: 1, mm2: 1e-6, cm2: 1e-4, ft2: 0.092903, in2: 0.00064516 },
+    volume: { m3: 1, liter: 0.001, cm3: 1e-6, ft3: 0.0283168, gal_us: 0.00378541 },
+    mass: { kg: 1, g: 0.001, ton: 1000, lb: 0.453592, oz: 0.0283495 },
+    pressure: { bar: 1, "kg/cm2": 0.980665, psi: 0.0689476, kPa: 0.01, MPa: 10, atm: 1.01325, mmHg: 0.00133322 },
+    energy: { J: 1, kJ: 1000, cal: 4.184, kcal: 4184, kWh: 3600000, BTU: 1055.06 },
+    power: { W: 1, kW: 1000, hp: 745.7, "kcal/h": 1.163 },
+    velocity: { "m/s": 1, "km/h": 0.277778, "ft/s": 0.3048, knot: 0.514444 },
+    mass_flow: { "kg/h": 1, "kg/s": 3600, "lb/h": 0.453592, "ton/h": 1000 },
+    vol_flow: { "m3/h": 1, "m3/s": 3600, "l/min": 0.06, "gpm_us": 0.227125 },
+    viscosity: { "cP(mPa·s)": 0.001, "P(Pa·s)": 1, "lb/ft·s": 1.48816 }
+};
+
+function updateUnits() {
+    const prop = document.getElementById('prop-select').value;
+    const fromSelect = document.getElementById('from-unit');
+    const toSelect = document.getElementById('to-unit');
+    
+    fromSelect.innerHTML = "";
+    toSelect.innerHTML = "";
+
+    if (prop === "temperature") {
+        const temps = ["Celsius", "Fahrenheit", "Kelvin"];
+        temps.forEach(u => {
+            fromSelect.add(new Option(u, u));
+            toSelect.add(new Option(u, u));
+        });
+    } else {
+        Object.keys(unitData[prop]).forEach(u => {
+            fromSelect.add(new Option(u, u));
+            toSelect.add(new Option(u, u));
+        });
+    }
+    convert();
+}
+
+function convert() {
+    const prop = document.getElementById('prop-select').value;
+    const val = parseFloat(document.getElementById('from-value').value);
+    const fromUnit = document.getElementById('from-unit').value;
+    const toUnit = document.getElementById('to-unit').value;
+    let res = 0;
+
+    if (isNaN(val)) { document.getElementById('res-val').innerText = "-"; return; }
+
+    if (prop === "temperature") {
+        let kelvin = 0;
+        if (fromUnit === "Celsius") kelvin = val + 273.15;
+        else if (fromUnit === "Fahrenheit") kelvin = (val - 32) * 5/9 + 273.15;
+        else kelvin = val;
+
+        if (toUnit === "Celsius") res = kelvin - 273.15;
+        else if (toUnit === "Fahrenheit") res = (kelvin - 273.15) * 9/5 + 32;
+        else res = kelvin;
+    } else {
+        const factorFrom = unitData[prop][fromUnit];
+        const factorTo = unitData[prop][toUnit];
+        res = val * (factorFrom / factorTo);
+    }
+
+    // 결과 출력 (소수점 6자리까지, 불필요한 0 제거)
+    document.getElementById('res-val').innerText = Number(res.toFixed(6)) + " " + toUnit;
+}
+
+// 초기화
+updateUnits();
+</script>
