@@ -47,6 +47,13 @@ Standard conversions for **Length**, **Area**, **Volume**, **Mass**, and **Veloc
 * **Standard Ratios:** Conversion factors are based on internationally recognized standards (e.g., ISO and NIST).
 
 > **Pro Tip:** When performing high-pressure vessel calculations, always ensure you are distinguishing between **gauge pressure** and **absolute pressure**. This converter handles numerical value transitions; manual adjustment for atmospheric pressure may be required depending on your specific formula.
+### ⚠️ Technical Note on Mach Number
+The conversion for **Mach** in this tool is based on the speed of sound in **dry air at 15°C (288.15 K) at sea level**, which is approximately **340.3 m/s**. 
 
+In real-world engineering, the speed of sound ($a$) is a function of the medium's temperature and properties:
+$$a = \sqrt{\gamma R T}$$
+*where $\gamma$ is the adiabatic index, $R$ is the specific gas constant, and $T$ is the absolute temperature.*
+
+Please use the Mach conversion as a **general reference only**. For high-precision aerodynamic or fluid flow calculations (e.g., choked flow in safety valves), always calculate the local speed of sound based on your process fluid's actual temperature and composition.
 ---
 
