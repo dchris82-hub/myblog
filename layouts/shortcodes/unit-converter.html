@@ -1,41 +1,43 @@
 <div id="unit-converter-container" style="background: #fdfdfd; padding: 25px; border-radius: 12px; border: 1px solid #eaeaea; margin: 25px 0; color: #2c3e50; font-family: 'Segoe UI', sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-    <h3 style="margin-top:0; border-bottom: 2px solid #34495e; padding-bottom: 10px; color: #34495e;">Professional Engineering Unit Converter</h3>
+    <h3 style="margin-top:0; border-bottom: 2px solid #34495e; padding-bottom: 10px; color: #34495e;">Ultimate Engineering Unit Converter</h3>
     
     <div style="margin-bottom: 15px;">
-        <label style="font-weight:bold; font-size: 0.85em;">Select Property</label>
-        <select id="prop-select" onchange="updateUnits()" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: white; font-weight: bold;">
-            <optgroup label="Basic Dimensions">
-                <option value="length">Length</option>
-                <option value="area">Area</option>
-                <option value="volume">Volume</option>
-                <option value="mass">Mass</option>
-                <option value="velocity">Velocity</option>
+        <label style="font-weight:bold; font-size: 0.85em;">Select Property (Total 20 Dimensions)</label>
+        <select id="prop-select" onchange="updateUnits()" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: white; font-weight: bold; cursor:pointer;">
+            <optgroup label="Geometry & Mechanics">
+                <option value="length">1. Length</option>
+                <option value="area">2. Area (Surface)</option>
+                <option value="volume">3. Volume</option>
+                <option value="mass">4. Mass</option>
+                <option value="velocity">5. Velocity</option>
+                <option value="force">6. Force</option>
+                <option value="torque">7. Torque</option>
             </optgroup>
-            <optgroup label="Flow & Force">
-                <option value="mass_flow">Mass Flow Rate</option>
-                <option value="vol_flow">Volumetric Flow Rate</option>
-                <option value="force">Force</option>
-                <option value="pressure">Pressure</option>
+            <optgroup label="Flow & Pressure">
+                <option value="pressure">8. Pressure</option>
+                <option value="mass_flow">9. Mass Flow Rate</option>
+                <option value="vol_flow">10. Volumetric Flow Rate</option>
+                <option value="density">11. Density</option>
             </optgroup>
             <optgroup label="Thermodynamics">
-                <option value="temperature">Temperature</option>
-                <option value="energy">Energy / Work</option>
-                <option value="power">Power</option>
-                <option value="enthalpy">Specific Enthalpy</option>
-                <option value="entropy">Specific Entropy / Heat Capacity</option>
-                <option value="thermal_cond">Thermal Conductivity</option>
+                <option value="temperature">12. Temperature</option>
+                <option value="energy">13. Energy / Work</option>
+                <option value="power">14. Power</option>
+                <option value="enthalpy">15. Specific Enthalpy</option>
+                <option value="entropy">16. Specific Entropy / Heat Capacity</option>
+                <option value="thermal_cond">17. Thermal Conductivity</option>
+                <option value="heat_transfer">18. Heat Transfer Coefficient</option>
             </optgroup>
             <optgroup label="Fluid Properties">
-                <option value="density">Density</option>
-                <option value="visc_dyn">Dynamic Viscosity</option>
-                <option value="visc_kin">Kinematic Viscosity</option>
+                <option value="visc_dyn">19. Dynamic Viscosity</option>
+                <option value="visc_kin">20. Kinematic Viscosity</option>
             </optgroup>
         </select>
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
         <div>
-            <label style="font-weight:bold; font-size: 0.85em;">Value</label>
+            <label style="font-weight:bold; font-size: 0.85em;">Input Value</label>
             <input type="number" id="from-value" value="1" oninput="convert()" style="width: 100%; padding: 9px; border: 1px solid #ccc; border-radius: 5px;">
         </div>
         <div>
@@ -50,28 +52,30 @@
     </div>
 
     <div id="converter-result" style="padding: 20px; background: #2c3e50; color: white; border-radius: 8px; text-align: center;">
-        <div style="font-size: 0.9em; opacity: 0.8; margin-bottom: 5px;">Converted Result</div>
-        <div id="res-val" style="font-size: 1.6em; font-weight: bold; word-break: break-all;">-</div>
+        <div style="font-size: 0.85em; opacity: 0.7; margin-bottom: 5px;">Result</div>
+        <div id="res-val" style="font-size: 1.5em; font-weight: bold; overflow-wrap: break-word;">-</div>
     </div>
 </div>
 
 <script>
 const unitData = {
-    length: { m: 1, mm: 0.001, cm: 0.01, km: 1000, in: 0.0254, ft: 0.3048, mile: 1609.34 },
-    area: { m2: 1, mm2: 1e-6, cm2: 1e-4, ft2: 0.092903, in2: 0.00064516, acre: 4046.86 },
-    volume: { m3: 1, liter: 0.001, cm3: 1e-6, ft3: 0.0283168, gal_us: 0.00378541, bbl: 0.158987 },
-    mass: { kg: 1, g: 0.001, mg: 1e-6, ton_m: 1000, lb: 0.453592, oz: 0.0283495 },
-    velocity: { "m/s": 1, "m/h": 1/3600, "km/h": 0.277778, "ft/s": 0.3048, "ft/min": 0.00508, knot: 0.514444 },
-    force: { N: 1, kN: 1000, kgf: 9.80665, lbf: 4.44822 },
-    pressure: { bar: 1, "kg/cm2": 0.980665, psi: 0.0689476, kPa: 0.01, MPa: 10, atm: 1.01325, mmHg: 0.00133322, "mmH2O": 0.0000980665 },
+    length: { m: 1, mm: 0.001, cm: 0.01, km: 1000, in: 0.0254, ft: 0.3048, yd: 0.9144, mile: 1609.34 },
+    area: { m2: 1, mm2: 1e-6, cm2: 1e-4, ft2: 0.092903, in2: 0.00064516, acre: 4046.86, hectare: 10000 },
+    volume: { m3: 1, liter: 0.001, cm3: 1e-6, ft3: 0.0283168, gal_us: 0.00378541, bbl_oil: 0.158987, ml: 1e-6 },
+    mass: { kg: 1, g: 0.001, mg: 1e-6, ton_m: 1000, lb: 0.453592, oz: 0.0283495, ton_us: 907.185 },
+    velocity: { "m/s": 1, "km/h": 0.277778, "ft/s": 0.3048, "ft/min": 0.00508, knot: 0.514444, "m/min": 1/60 },
+    force: { N: 1, kN: 1000, kgf: 9.80665, lbf: 4.44822, dyne: 1e-5 },
+    torque: { "N·m": 1, "kgf·m": 9.80665, "lbf·ft": 1.35582, "lbf·in": 0.112985 },
+    pressure: { bar: 1, "kg/cm2": 0.980665, psi: 0.0689476, kPa: 0.01, MPa: 10, atm: 1.01325, mmHg: 0.00133322, mmH2O: 0.0000980665, Pa: 0.00001 },
+    mass_flow: { "kg/h": 1, "kg/s": 3600, "ton/h": 1000, "lb/h": 0.453592, "lb/s": 1632.93, "g/s": 3.6 },
+    vol_flow: { "m3/h": 1, "m3/s": 3600, "l/min": 0.06, "gpm_us": 0.227125, "cfm(ft3/min)": 1.69901, "l/s": 3.6 },
+    density: { "kg/m3": 1, "g/cm3": 1000, "lb/ft3": 16.0185, "lb/in3": 27679.9, "kg/liter": 1000 },
     energy: { J: 1, kJ: 1000, MJ: 1e6, cal: 4.184, kcal: 4184, kWh: 3600000, BTU: 1055.06, "ft·lbf": 1.35582 },
-    power: { W: 1, kW: 1000, MW: 1e6, hp: 745.7, "kcal/h": 1.163, "BTU/h": 0.293071 },
-    mass_flow: { "kg/h": 1, "kg/s": 3600, "ton/h": 1000, "lb/h": 0.453592, "lb/s": 1632.93 },
-    vol_flow: { "m3/h": 1, "m3/s": 3600, "l/min": 0.06, "gpm_us": 0.227125, "ft3/min(cfm)": 1.69901 },
-    density: { "kg/m3": 1, "g/cm3": 1000, "lb/ft3": 16.0185, "lb/in3": 27679.9 },
-    enthalpy: { "kJ/kg": 1, "J/g": 1, "kcal/kg": 4.1868, "BTU/lb": 2.326 },
+    power: { W: 1, kW: 1000, MW: 1e6, hp: 745.7, "kcal/h": 1.163, "BTU/h": 0.293071, "ton_ref": 3516.85 },
+    enthalpy: { "kJ/kg": 1, "J/g": 1, "kcal/kg": 4.1868, "BTU/lb": 2.326, "kJ/g": 1000 },
     entropy: { "kJ/kg·K": 1, "J/g·K": 1, "kcal/kg·C": 4.1868, "BTU/lb·F": 4.1868 },
-    thermal_cond: { "W/m·K": 1, "kcal/h·m·C": 1.163, "BTU/h·ft·F": 1.73073 },
+    thermal_cond: { "W/m·K": 1, "kcal/h·m·C": 1.163, "BTU/h·ft·F": 1.73073, "W/cm·K": 100 },
+    heat_transfer: { "W/m2·K": 1, "kcal/h·m2·C": 1.163, "BTU/h·ft2·F": 5.67826 },
     visc_dyn: { "cP(mPa·s)": 0.001, "P(Pa·s)": 1, "kg/m·h": 0.000277778, "lb/ft·s": 1.48816, "lb/ft·h": 0.000413379 },
     visc_kin: { "cSt(mm2/s)": 1e-6, "stokes(cm2/s)": 1e-4, "m2/s": 1, "ft2/s": 0.092903, "ft2/h": 0.0000258064 }
 };
@@ -104,22 +108,19 @@ function convert() {
     if (isNaN(val)) { document.getElementById('res-val').innerText = "-"; return; }
 
     if (prop === "temperature") {
-        let k = 0;
-        if (fromUnit === "Celsius") k = val + 273.15;
-        else if (fromUnit === "Fahrenheit") k = (val - 32) * 5/9 + 273.15;
-        else if (fromUnit === "Rankine") k = val * 5/9;
-        else k = val;
-
-        if (toUnit === "Celsius") res = k - 273.15;
-        else if (toUnit === "Fahrenheit") res = (k - 273.15) * 9/5 + 32;
-        else if (toUnit === "Rankine") res = k * 1.8;
-        else res = k;
+        let k = (fromUnit === "Celsius") ? val + 273.15 :
+                (fromUnit === "Fahrenheit") ? (val - 32) * 5/9 + 273.15 :
+                (fromUnit === "Rankine") ? val * 5/9 : val;
+        res = (toUnit === "Celsius") ? k - 273.15 :
+              (toUnit === "Fahrenheit") ? (k - 273.15) * 9/5 + 32 :
+              (toUnit === "Rankine") ? k * 1.8 : k;
     } else {
         res = val * (unitData[prop][fromUnit] / unitData[prop][toUnit]);
     }
 
-    // 매우 작은 숫자는 지수 표기법, 일반 숫자는 소수점 6자리
-    let displayRes = (Math.abs(res) < 1e-4 && res !== 0) ? res.toExponential(4) : Number(res.toFixed(6));
+    let displayRes = (Math.abs(res) < 1e-4 && res !== 0) || Math.abs(res) > 1e9 
+                     ? res.toExponential(4) 
+                     : Number(res.toFixed(6));
     document.getElementById('res-val').innerText = displayRes + " " + toUnit;
 }
 updateUnits();
