@@ -1,16 +1,16 @@
-<div id="calculator-container" style="background: #fdfdfd; padding: 25px; border-radius: 12px; border: 1px solid #eaeaea; margin: 25px 0; color: #2c3e50; font-family: sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-    <h3 style="margin-top:0; border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #007bff;">Vessel Volume Calculator (Pro)</h3>
-    
+<div id="calculator-container" style="background: #fdfdfd; padding: 25px; border-radius: 12px; border: 1px solid #eaeaea; margin: 25px 0; color: #2c3e50; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+    <h3 style="margin-top:0; border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #007bff;">Vessel Volume Calculator (Revised)</h3>
+
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
         <div>
-            <label style="font-weight:bold; font-size: 0.9em;">Orientation</label><br>
+            <label style="font-weight:bold; font-size: 0.85em;">Orientation</label>
             <select id="orientation" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
                 <option value="horizontal">Horizontal</option>
-                <option value="vertical">Vertical</option>
+                <option value="vertical">Vertical (Bottom + Shell + Top)</option>
             </select>
         </div>
         <div>
-            <label style="font-weight:bold; font-size: 0.9em;">Head Type</label><br>
+            <label style="font-weight:bold; font-size: 0.85em;">Head Type (Both Ends)</label>
             <select id="headType" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
                 <option value="ellip">2:1 Ellipsoidal</option>
                 <option value="hemi">Hemispherical</option>
@@ -21,87 +21,236 @@
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
         <div>
-            <label style="font-weight:bold; font-size: 0.9em;">Diameter (D, mm)</label>
-            <input type="number" id="diameter" value="2000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            <label style="font-weight:bold; font-size: 0.85em;">Diameter (D, mm)</label>
+            <input type="number" id="diameter" value="2000" min="1" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
         </div>
         <div>
-            <label style="font-weight:bold; font-size: 0.9em;">Length (T-T, mm)</label>
-            <input type="number" id="length" value="5000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            <label style="font-weight:bold; font-size: 0.85em;">Straight Length, Tan-to-Tan (L, mm)</label>
+            <input type="number" id="length" value="5000" min="0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
         </div>
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
         <div>
-            <label style="font-weight:bold; font-size: 0.9em; color: #e74c3c;">Low Liquid Level (LLL, mm)</label>
-            <input type="number" id="lll" value="200" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            <label style="font-weight:bold; font-size: 0.85em; color: #e74c3c;">Low Liquid Level (LLL, mm)</label>
+            <input type="number" id="lll" value="200" min="0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
         </div>
         <div>
-            <label style="font-weight:bold; font-size: 0.9em; color: #27ae60;">High Liquid Level (HLL, mm)</label>
-            <input type="number" id="hll" value="1800" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            <label style="font-weight:bold; font-size: 0.85em; color: #27ae60;">High Liquid Level (HLL, mm)</label>
+            <input type="number" id="hll" value="1800" min="0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
         </div>
     </div>
 
-    <button onclick="calculateVessel()" style="background: #007bff; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; font-size: 1em; transition: 0.3s;">Calculate Volume</button>
-    
-    <div id="result-box" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-left: 4px solid #007bff; display:none;">
-        <div id="res-total" style="margin-bottom: 8px;"></div>
+    <button onclick="calculateVessel()" style="background: #007bff; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; font-size: 1em;">Calculate Results</button>
+
+    <div id="result-box" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-left: 4px solid #007bff; display:none; line-height: 1.6;">
+        <div id="res-info" style="font-size: 0.85em; color: #666; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;"></div>
+        <div id="res-total"></div>
         <div id="res-effective" style="font-weight: bold; color: #2c3e50;"></div>
     </div>
 </div>
 
 <script>
+function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+}
+
+function circleSegmentArea(h, r) {
+    const hh = clamp(h, 0, 2 * r);
+    if (hh <= 0) return 0;
+    if (hh >= 2 * r) return Math.PI * r * r;
+
+    const x = clamp((r - hh) / r, -1, 1);
+    const y = Math.max(0, 2 * r * hh - hh * hh);
+    return r * r * Math.acos(x) - (r - hh) * Math.sqrt(y);
+}
+
+function getHeadDepth(D, headType) {
+    if (headType === "hemi") return D / 2;
+    if (headType === "ellip") return D / 4; // ideal 2:1 ellipsoidal head
+    return 0;
+}
+
+function getHeadFullVolume(D, headType) {
+    const r = D / 2;
+    if (headType === "hemi") {
+        return (2 / 3) * Math.PI * Math.pow(r, 3); // one hemisphere
+    }
+    if (headType === "ellip") {
+        return Math.PI * Math.pow(D, 3) / 24; // one ideal 2:1 half-ellipsoid
+    }
+    return 0;
+}
+
+// Area of horizontal slice through head at axial location x from tangent line
+// x: 0 at tangent line, x: a at pole
+function headCrossSectionAreaAtX(x, D, headType) {
+    const r = D / 2;
+    const a = getHeadDepth(D, headType);
+    if (headType === "flat" || a <= 0) return 0;
+
+    const xx = clamp(x, 0, a);
+
+    if (headType === "hemi") {
+        // Sphere radius r, tangent plane located at x=0, pole at x=r
+        // cross-sectional radius^2 = r^2 - (r - x)^2 = 2rx - x^2
+        const rr2 = Math.max(0, 2 * r * xx - xx * xx);
+        return Math.PI * rr2;
+    }
+
+    if (headType === "ellip") {
+        // Ideal half-ellipsoid: x^2/a^2 + y^2/r^2 + z^2/r^2 = 1
+        // cross-sectional radius^2 = r^2 * (1 - x^2/a^2)
+        const rr2 = Math.max(0, r * r * (1 - (xx * xx) / (a * a)));
+        return Math.PI * rr2;
+    }
+
+    return 0;
+}
+
+// Radius of head cross-section circle at axial location x
+function headRadiusAtX(x, D, headType) {
+    const area = headCrossSectionAreaAtX(x, D, headType);
+    return Math.sqrt(area / Math.PI);
+}
+
+// Numerical integration for horizontal head liquid volume for one head
+function horizontalOneHeadVolume(h, D, headType, n = 400) {
+    const a = getHeadDepth(D, headType);
+    if (headType === "flat" || a <= 0) return 0;
+
+    const hh = clamp(h, 0, D);
+    if (hh <= 0) return 0;
+
+    let vol = 0;
+    const dx = a / n;
+
+    for (let i = 0; i < n; i++) {
+        const xMid = (i + 0.5) * dx;
+        const localR = headRadiusAtX(xMid, D, headType);
+        const localArea = circleSegmentArea(hh, localR);
+        vol += localArea * dx;
+    }
+
+    return vol;
+}
+
+// Partial volume in one bottom head for vertical vessel, height y measured from head bottom
+function verticalBottomHeadPartial(y, D, headType) {
+    const r = D / 2;
+    const b = getHeadDepth(D, headType);
+
+    if (headType === "flat" || b <= 0) return 0;
+
+    const yy = clamp(y, 0, b);
+
+    // Ideal hemi / ideal 2:1 ellipsoidal bottom head
+    return Math.PI * r * r / (b * b) * (b * yy * yy - Math.pow(yy, 3) / 3);
+}
+
+function getMaxHeight(D, L, orientation, headType) {
+    if (orientation === "horizontal") return D;
+
+    const headH = getHeadDepth(D, headType);
+    if (headType === "flat") return L;
+    return L + 2 * headH;
+}
+
 function getVolAtH(h, D, L, orientation, headType) {
     const r = D / 2;
+    const maxH = getMaxHeight(D, L, orientation, headType);
+    const currentH = clamp(h, 0, maxH);
+
     let vol = 0;
 
     if (orientation === "horizontal") {
-        // 1. Cylinder Part
-        const area = Math.pow(r, 2) * Math.acos((r - h) / r) - (r - h) * Math.sqrt(2 * r * h - Math.pow(h, 2));
-        vol = area * L;
+        // Cylinder
+        const cylArea = circleSegmentArea(currentH, r);
+        vol += cylArea * L;
 
-        // 2. Head Part (2 heads)
-        if (headType === "hemi") {
-            vol += (Math.PI * Math.pow(h, 2) / 3) * (3 * r - h) * 2 / 2; // Approx for horizontal hemi heads
-            vol += (Math.PI * Math.pow(h, 2) * (3 * r - h)) / 3;
-        } else if (headType === "ellip") {
-            vol += ((Math.PI * Math.pow(h, 2) * (3 * r - h)) / 3) * 0.5; // 2:1 is half of hemi
+        // Two identical heads, numerical integration
+        if (headType !== "flat") {
+            vol += 2 * horizontalOneHeadVolume(currentH, D, headType);
         }
     } else {
-        // Vertical Logic
-        let headH = 0;
-        if (headType === "hemi") headH = r;
-        else if (headType === "ellip") headH = D / 4;
+        const headH = getHeadDepth(D, headType);
+        const oneHeadFull = getHeadFullVolume(D, headType);
+        const shellFull = Math.PI * r * r * L;
 
-        // Simplified vertical calc: Bottom Head + Cylinder
-        if (h <= headH && headType !== "flat") {
-            if (headType === "hemi") vol = (Math.PI * Math.pow(h, 2) * (3 * r - h)) / 3;
-            else vol = (Math.PI * Math.pow(h, 2) * (3 * (D/4) - h)) / 3 * 2; // Approx
+        if (headType === "flat") {
+            vol = Math.PI * r * r * currentH;
+        } else if (currentH <= headH) {
+            // Bottom head only
+            vol = verticalBottomHeadPartial(currentH, D, headType);
+        } else if (currentH <= headH + L) {
+            // Bottom head + part of shell
+            vol = oneHeadFull + Math.PI * r * r * (currentH - headH);
         } else {
-            const headVol = (headType === "hemi") ? (2/3 * Math.PI * Math.pow(r, 3)) : 
-                            (headType === "ellip") ? (Math.PI * Math.pow(D, 3) / 24) : 0;
-            const cylH = h - headH;
-            vol = headVol + (Math.PI * Math.pow(r, 2) * cylH);
+            // Bottom head + full shell + part of top head
+            const filledInTop = currentH - headH - L; // 0 ~ headH
+            // By symmetry, filled volume in top head from bottom side is same partial formula
+            vol = oneHeadFull + shellFull + verticalBottomHeadPartial(filledInTop, D, headType);
         }
     }
-    return vol / 1e9; // convert mm3 to m3
+
+    return vol / 1e9; // mm3 -> m3
 }
 
 function calculateVessel() {
     const D = parseFloat(document.getElementById('diameter').value);
     const L = parseFloat(document.getElementById('length').value);
-    const hll = parseFloat(document.getElementById('hll').value);
     const lll = parseFloat(document.getElementById('lll').value);
+    const hll = parseFloat(document.getElementById('hll').value);
     const orientation = document.getElementById('orientation').value;
     const headType = document.getElementById('headType').value;
 
-    if (lll >= hll) { alert("HLL must be greater than LLL!"); return; }
+    if (!Number.isFinite(D) || !Number.isFinite(L) || !Number.isFinite(lll) || !Number.isFinite(hll)) {
+        alert("Please enter valid numeric values.");
+        return;
+    }
 
-    const volHLL = getVolAtH(hll, D, L, orientation, headType);
-    const volLLL = getVolAtH(lll, D, L, orientation, headType);
-    const effectiveVol = (volHLL - volLLL).toFixed(3);
+    if (D <= 0) {
+        alert("Diameter must be greater than 0.");
+        return;
+    }
+
+    if (L < 0) {
+        alert("Length must be 0 or greater.");
+        return;
+    }
+
+    if (lll < 0 || hll < 0) {
+        alert("Liquid levels cannot be negative.");
+        return;
+    }
+
+    if (lll >= hll) {
+        alert("HLL must be greater than LLL.");
+        return;
+    }
+
+    const maxH = getMaxHeight(D, L, orientation, headType);
+    const hllUsed = clamp(hll, 0, maxH);
+    const lllUsed = clamp(lll, 0, maxH);
+
+    const volHLL = getVolAtH(hllUsed, D, L, orientation, headType);
+    const volLLL = getVolAtH(lllUsed, D, L, orientation, headType);
+    const effectiveVol = volHLL - volLLL;
+
+    const note = [
+        "L is treated as straight cylindrical tangent-to-tangent length.",
+        headType === "ellip" ? "2:1 ellipsoidal head is modeled as an ideal half-ellipsoid." : "",
+        orientation === "horizontal" && headType !== "flat" ? "Horizontal head volume is evaluated by numerical integration." : ""
+    ].filter(Boolean).join(" ");
 
     document.getElementById('result-box').style.display = "block";
-    document.getElementById('res-total').innerHTML = `📍 Total Liquid Volume (at HLL): <span style="color:#007bff">${volHLL.toFixed(3)} m³</span>`;
-    document.getElementById('res-effective').innerHTML = `✅ Effective Liquid Volume (HLL-LLL): <span style="color:#27ae60">${effectiveVol} m³</span>`;
+    document.getElementById('res-info').innerHTML = `
+        Max allowable level used in calculation: <b>${maxH.toFixed(1)} mm</b><br>
+        ${note}
+    `;
+    document.getElementById('res-total').innerHTML =
+        `📍 Volume at HLL: <span style="color:#007bff">${volHLL.toFixed(4)} m³</span>`;
+    document.getElementById('res-effective').innerHTML =
+        `✅ Effective Volume (HLL - LLL): <span style="color:#27ae60">${effectiveVol.toFixed(4)} m³</span>`;
 }
 </script>
