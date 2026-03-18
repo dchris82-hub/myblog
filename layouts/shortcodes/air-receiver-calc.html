@@ -105,41 +105,47 @@ function calcVerification() {
     const Pop = parseFloat(document.getElementById('p_op').value);
     const Pmin = parseFloat(document.getElementById('p_min').value);
     
-    // 1. Total Volume & Margin
+    // 1. Total Volume (Selected)
     const V_sel = (Math.PI * Math.pow(D_m, 2) / 4) * L_m + (Math.PI * Math.pow(D_m, 3) / 12);
     const margin = ((V_sel - global_Vreq) / global_Vreq) * 100;
 
-    // 2. Verification Data
+    // 2. Constants for Unit Consistency (kg/cm2a based)
     const Patm_kg = 1.0332;
-    const P1_bar = (Pop + Patm_kg) * 0.980665;
-    const P2_bar = (Pmin + Patm_kg) * 0.980665;
+    const P1_abs = Pop + Patm_kg; // kg/cm2a
+    const P2_abs = Pmin + Patm_kg; // kg/cm2a
     const T_K = T + 273.15;
-    const R = 0.08314; // m3.bar/(kgmol.K)
+    
+    // 🌟 기체 상수를 kg/cm2 단위에 맞춰 변경 (0.08478 m3·kg/cm2 / kgmol·K)
+    // R = 0.08314 (bar 단위) * 1.01972 (kg/cm2/bar 환산) = 0.08478
+    const R_kg = 0.08478; 
     const V_std = 22.414; // Nm3/kgmol
 
-    const n1 = (P1_bar * V_sel) / (R * T_K);
-    const n2 = (P2_bar * V_sel) / (R * T_K);
+    // n = PV / RT (모든 단위가 kg/cm2a, m3, K로 일치됨)
+    const n1 = (P1_abs * V_sel) / (R_kg * T_K);
+    const n2 = (P2_abs * V_sel) / (R_kg * T_K);
+    
     const vol1_N = n1 * V_std;
     const vol2_N = n2 * V_std;
     
     const delivered = vol1_N - vol2_N;
     const delivered_hr = delivered * (60 / user_time);
 
-    // 🌟 3. 경고 메시지 로직 (Margin < 0 일 경우) 🌟
+    // 3. Warning Logic
     let warningMsg = "";
-    let marginColor = "#27ae60"; // 기본 녹색
-    
+    let marginColor = "#27ae60";
     if (margin < 0) {
         warningMsg = `<div style="background: #ffebe6; color: #e74c3c; padding: 10px; border-radius: 5px; margin-bottom: 12px; border-left: 4px solid #e74c3c; font-size: 0.95em;">
-                        <b>⚠️ WARNING:</b> Selected volume is smaller than the required volume. Please increase the vessel size.
+                        <b>⚠️ WARNING:</b> Selected volume is smaller than the required volume.
                       </div>`;
-        marginColor = "#e74c3c"; // 마진 퍼센트 글씨도 빨간색으로 변경
+        marginColor = "#e74c3c";
     }
 
     // 4. Display Results
     document.getElementById('res-phase2').style.display = "block";
     document.getElementById('ver-vol-margin').innerHTML = `${warningMsg}Total Volume: ${V_sel.toFixed(3)} m³ &nbsp; | &nbsp; <span style="color: ${marginColor}">Margin: ${margin.toFixed(1)}%</span>`;
-    document.getElementById('ver-r').innerHTML = `Universal Gas Constant (R): <b>0.08314</b> m³·bar/(kgmol·K)`;
+    
+    // UI에 변경된 상수 값 표시
+    document.getElementById('ver-r').innerHTML = `Universal Gas Constant (R): <b>0.08478</b> m³·kg/cm²/(kgmol·K)`;
     document.getElementById('ver-ini-mol').innerHTML = `Initial Mol in Receiver: <b>${n1.toFixed(3)}</b> kgmol`;
     document.getElementById('ver-ini-vol').innerHTML = `Initial Volume in Receiver: <b>${vol1_N.toFixed(2)}</b> Nm³`;
     document.getElementById('ver-fin-mol').innerHTML = `Final Mol in Receiver: <b>${n2.toFixed(3)}</b> kgmol`;
