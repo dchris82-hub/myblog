@@ -7,7 +7,7 @@ tags: ["Engineering", "Tool"]
 This calculator computes the liquid volume in a vessel.
 
 {{< vessel-liquid-volume-calc >}}
-
+{{< ad-mid >}}
 Boost your productivity with this calculation tool!
 
 ## 📘Technical Guide: 
