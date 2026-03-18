@@ -61,22 +61,38 @@
 const unitData = {
     length: { m: 1, mm: 0.001, cm: 0.01, km: 1000, in: 0.0254, ft: 0.3048, yd: 0.9144, mile: 1609.34, "nautical mile": 1852, micro_m: 1e-6, Angstrom: 1e-10 },
     area: { m2: 1, mm2: 1e-6, cm2: 1e-4, km2: 1e6, ft2: 0.092903, in2: 0.00064516, acre: 4046.86, hectare: 10000, "yd2": 0.836127, "mile2": 2589988 },
-    volume: { m3: 1, liter: 0.001, cm3: 1e-6, ft3: 0.0283168, in3: 1.6387e-5, gal_us: 0.00378541, gal_uk: 0.00454609, bbl_oil: 0.158987, bbl_liquid: 0.11924, ml: 1e-6, "cc": 1e-6, "yd3": 0.764555, "pint_us": 0.000473176, "quart_us": 0.000946353 },
+    volume: { m3: 1, liter: 0.001, cm3: 1e-6, ft3: 0.0283168, in3: 1.6387e-5, gal_us: 0.00378541, gal_uk: 0.00454609, "bbl_oil (US, 42 gal)": 0.158987, "bbl_liquid (US, 31.5 gal)": 0.11924, ml: 1e-6, "cc": 1e-6, "yd3": 0.764555, "pint_us": 0.000473176, "quart_us": 0.000946353 },
     mass: { kg: 1, g: 0.001, mg: 1e-6, micro_g: 1e-9, ton_m: 1000, lb: 0.453592, oz: 0.0283495, ton_us: 907.185, ton_uk: 1016.05, grain: 6.4798e-5, stone: 6.35029 },
-    pressure: { bar: 1, "kg/cm2": 0.980665, psi: 0.0689476, kPa: 0.01, MPa: 10, hPa: 0.001, atm: 1.01325, mmHg: 0.00133322, "inHg": 0.0338639, mmH2O: 0.0000980665, inH2O: 0.00249089, Pa: 0.00001, "mbar": 0.001, "kg/m2": 0.0000980665, "torr": 0.00133322, "psf": 0.000478803 },
-    velocity: { "m/s": 1, "km/h": 0.277778, "km/s": 1000, "ft/s": 0.3048, "ft/min": 0.00508, knot: 0.514444, "m/min": 1/60, "mph": 0.44704, "mach": 340.3 },
+    pressure: { bar: 1, "kgf/cm2": 0.980665, psi: 0.0689476, kPa: 0.01, MPa: 10, hPa: 0.001, atm: 1.01325, mmHg: 0.00133322, "inHg": 0.0338639, mmH2O: 0.0000980665, inH2O: 0.00249089, Pa: 0.00001, "mbar": 0.001, "kgf/m2": 0.0000980665, "torr": 0.00133322, "psf": 0.000478803 },
+    velocity: { 
+    "m/s": 1, 
+    "km/h": 0.277778, 
+    "ft/s": 0.3048, 
+    "knot": 0.514444, 
+    "mph": 0.44704, 
+    "Mach (at 15°C Air)": 340.3 // Standard Speed of Sound
+},
     force: { N: 1, kN: 1000, MN: 1e6, kgf: 9.80665, lbf: 4.44822, dyne: 1e-5, kip: 4448.22, "gf": 0.00980665 },
     torque: { "N·m": 1, "kN·m": 1000, "kgf·m": 9.80665, "lbf·ft": 1.35582, "lbf·in": 0.112985, "ozf·in": 0.00706155 },
     mass_flow: { "kg/h": 1, "kg/s": 3600, "kg/min": 60, "ton/h": 1000, "lb/h": 0.453592, "lb/s": 1632.93, "lb/min": 27.2155, "g/s": 3.6, "ton_us/h": 907.185 },
     vol_flow: { "m3/h": 1, "m3/s": 3600, "m3/min": 60, "l/min": 0.06, "l/s": 3.6, "gpm_us": 0.227125, "gpm_uk": 0.272766, "cfm(ft3/min)": 1.69901, "cfs(ft3/s)": 101.941, "bpd(oil)": 0.00662447 },
     density: { "kg/m3": 1, "g/cm3": 1000, "lb/ft3": 16.0185, "lb/in3": 27679.9, "kg/liter": 1000, "lb/gal_us": 119.826, "oz/in3": 1729.99 },
-    energy: { J: 1, kJ: 1000, MJ: 1e6, GJ: 1e9, cal: 4.184, kcal: 4184, kWh: 3600000, BTU: 1055.06, "ft·lbf": 1.35582, "eV": 1.60218e-19, "erg": 1e-7 },
+    energy: { J: 1, kJ: 1000, MJ: 1e6, GJ: 1e9, cal: 4.184, kcal: 4184, kWh: 3600000, "BTU (IT)": 1055.06, "ft·lbf": 1.35582, "eV": 1.60218e-19, "erg": 1e-7 },
     power: { W: 1, kW: 1000, MW: 1e6, GW: 1e9, hp: 745.7, "hp_metric": 735.499, "kcal/h": 1.163, "BTU/h": 0.293071, "ton_ref(US)": 3516.85, "ton_ref(UK)": 3922.72 },
     enthalpy: { "kJ/kg": 1, "J/g": 1, "MJ/kg": 1000, "kcal/kg": 4.1868, "BTU/lb": 2.326, "cal/g": 4.1868 },
     entropy: { "kJ/kg·K": 1, "J/g·K": 1, "kcal/kg·C": 4.1868, "BTU/lb·F": 4.1868, "J/kg·K": 0.001 },
     thermal_cond: { "W/m·K": 1, "kcal/h·m·C": 1.163, "BTU/h·ft·F": 1.73073, "W/cm·K": 100, "mW/m·K": 0.001 },
     heat_transfer: { "W/m2·K": 1, "kcal/h·m2·C": 1.163, "BTU/h·ft2·F": 5.67826, "W/cm2·K": 10000 },
-    visc_dyn: { "cP(mPa·s)": 0.001, "P(Pa·s)": 1, "kg/m·h": 0.000277778, "lb/ft·s": 1.48816, "lb/ft·h": 0.000413379, "slug/ft·s": 47.8803 },
+    visc_dyn: { 
+    "Pa·s (kg/m·s)": 1, 
+    "cP (mPa·s)": 0.001, 
+    "P (Poise)": 0.1,    // 1 Poise = 0.1 Pa·s
+    "g/cm·s": 0.1,       // Poise와 동일
+    "kg/m·h": 0.000277778, 
+    "lb/ft·s": 1.48816, 
+    "lb/ft·h": 0.000413379, 
+    "slug/ft·s": 47.8803 
+},
     visc_kin: { "cSt(mm2/s)": 1e-6, "stokes(cm2/s)": 1e-4, "m2/s": 1, "ft2/s": 0.092903, "ft2/h": 0.0000258064, "in2/s": 0.00064516 }
 };
 
@@ -105,23 +121,53 @@ function convert() {
     const toUnit = document.getElementById('to-unit').value;
     let res = 0;
 
-    if (isNaN(val)) { document.getElementById('res-val').innerText = "-"; return; }
-
-    if (prop === "temperature") {
-        let k = (fromUnit === "Celsius") ? val + 273.15 :
-                (fromUnit === "Fahrenheit") ? (val - 32) * 5/9 + 273.15 :
-                (fromUnit === "Rankine") ? val * 5/9 : val;
-        res = (toUnit === "Celsius") ? k - 273.15 :
-              (toUnit === "Fahrenheit") ? (k - 273.15) * 9/5 + 32 :
-              (toUnit === "Rankine") ? k * 1.8 : k;
-    } else {
-        res = val * (unitData[prop][fromUnit] / unitData[prop][toUnit]);
+    // 입력값이 숫자가 아닐 경우 처리
+    if (isNaN(val)) { 
+        document.getElementById('res-val').innerText = "-"; 
+        return; 
     }
 
-    let displayRes = (Math.abs(res) < 1e-4 && res !== 0) || Math.abs(res) > 1e11 
-                     ? res.toExponential(5) 
-                     : Number(res.toFixed(6));
-    document.getElementById('res-val').innerText = displayRes + " " + toUnit;
+    // 1. 온도 변환 로직 (온도는 단순 곱셈이 아닌 오프셋이 필요함)
+    if (prop === "temperature") {
+        let k = 0;
+        // 입력 단위를 절대온도(Kelvin)로 통일
+        if (fromUnit === "Celsius") k = val + 273.15;
+        else if (fromUnit === "Fahrenheit") k = (val - 32) * 5/9 + 273.15;
+        else if (fromUnit === "Rankine") k = val * 5/9;
+        else k = val; // Kelvin
+
+        // 절대온도를 대상 단위로 변환
+        if (toUnit === "Celsius") res = k - 273.15;
+        else if (toUnit === "Fahrenheit") res = (k - 273.15) * 9/5 + 32;
+        else if (toUnit === "Rankine") res = k * 1.8;
+        else res = k; // Kelvin
+    } 
+    // 2. 일반 단위 변환 로직 (기준 단위 대비 비율 계산)
+    else {
+        const factorFrom = unitData[prop][fromUnit];
+        const factorTo = unitData[prop][toUnit];
+        res = val * (factorFrom / factorTo);
+    }
+
+    // 3. 결과값 포맷팅 (매우 작거나 큰 숫자는 지수 표기법 사용)
+    let displayRes = "";
+    if ((Math.abs(res) < 1e-4 && res !== 0) || Math.abs(res) > 1e11) {
+        displayRes = res.toExponential(5); // 소수점 5자리 지수 표기
+    } else {
+        displayRes = Number(res.toFixed(6)); // 소수점 6자리까지 표시 (불필요한 0 제거)
+    }
+
+    // 4. 조건부 안내 문구 (마하 수 선택 시 출력)
+    let note = "";
+    if (toUnit.includes("Mach") || fromUnit.includes("Mach")) {
+        note = `<div style="font-size: 0.75em; color: #ffcc00; margin-top: 8px; line-height: 1.4; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 5px;">
+                    * Mach calculation is based on standard air at 15°C (1 atm).<br>
+                    Real speed varies by medium and temperature.
+                </div>`;
+    }
+
+    // 5. 최종 결과 출력
+    document.getElementById('res-val').innerHTML = displayRes + " " + toUnit + note;
 }
 updateUnits();
 </script>
