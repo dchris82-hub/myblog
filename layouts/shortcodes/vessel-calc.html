@@ -1,37 +1,107 @@
-<div id="calculator-container" style="background: #f9f9f9; padding: 20px; border-radius: 10px; border: 1px solid #ddd; margin: 20px 0; color: #333;">
-    <h3 style="margin-top:0;">Vessel Volume Calculator (Horizontal)</h3>
-    <div style="margin-bottom: 10px;">
-        <label>Diameter (D, mm):</label><br>
-        <input type="number" id="diameter" value="2000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-    </div>
-    <div style="margin-bottom: 10px;">
-        <label>Length (L, mm):</label><br>
-        <input type="number" id="length" value="5000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-    </div>
-    <div style="margin-bottom: 20px;">
-        <label>Liquid Level (h, mm):</label><br>
-        <input type="number" id="height" value="500" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-    </div>
-    <button onclick="calculateVolume()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%;">Calculate</button>
+<div id="calculator-container" style="background: #fdfdfd; padding: 25px; border-radius: 12px; border: 1px solid #eaeaea; margin: 25px 0; color: #2c3e50; font-family: sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <h3 style="margin-top:0; border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #007bff;">Vessel Volume Calculator (Pro)</h3>
     
-    <div id="result" style="margin-top: 20px; font-weight: bold; font-size: 1.1em; color: #0056b3;"></div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+        <div>
+            <label style="font-weight:bold; font-size: 0.9em;">Orientation</label><br>
+            <select id="orientation" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+                <option value="horizontal">Horizontal</option>
+                <option value="vertical">Vertical</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-weight:bold; font-size: 0.9em;">Head Type</label><br>
+            <select id="headType" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+                <option value="ellip">2:1 Ellipsoidal</option>
+                <option value="hemi">Hemispherical</option>
+                <option value="flat">Flat</option>
+            </select>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+        <div>
+            <label style="font-weight:bold; font-size: 0.9em;">Diameter (D, mm)</label>
+            <input type="number" id="diameter" value="2000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+        <div>
+            <label style="font-weight:bold; font-size: 0.9em;">Length (T-T, mm)</label>
+            <input type="number" id="length" value="5000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+        <div>
+            <label style="font-weight:bold; font-size: 0.9em; color: #e74c3c;">Low Liquid Level (LLL, mm)</label>
+            <input type="number" id="lll" value="200" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+        <div>
+            <label style="font-weight:bold; font-size: 0.9em; color: #27ae60;">High Liquid Level (HLL, mm)</label>
+            <input type="number" id="hll" value="1800" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+    </div>
+
+    <button onclick="calculateVessel()" style="background: #007bff; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; font-size: 1em; transition: 0.3s;">Calculate Volume</button>
+    
+    <div id="result-box" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-left: 4px solid #007bff; display:none;">
+        <div id="res-total" style="margin-bottom: 8px;"></div>
+        <div id="res-effective" style="font-weight: bold; color: #2c3e50;"></div>
+    </div>
 </div>
 
 <script>
-function calculateVolume() {
+function getVolAtH(h, D, L, orientation, headType) {
+    const r = D / 2;
+    let vol = 0;
+
+    if (orientation === "horizontal") {
+        // 1. Cylinder Part
+        const area = Math.pow(r, 2) * Math.acos((r - h) / r) - (r - h) * Math.sqrt(2 * r * h - Math.pow(h, 2));
+        vol = area * L;
+
+        // 2. Head Part (2 heads)
+        if (headType === "hemi") {
+            vol += (Math.PI * Math.pow(h, 2) / 3) * (3 * r - h) * 2 / 2; // Approx for horizontal hemi heads
+            vol += (Math.PI * Math.pow(h, 2) * (3 * r - h)) / 3;
+        } else if (headType === "ellip") {
+            vol += ((Math.PI * Math.pow(h, 2) * (3 * r - h)) / 3) * 0.5; // 2:1 is half of hemi
+        }
+    } else {
+        // Vertical Logic
+        let headH = 0;
+        if (headType === "hemi") headH = r;
+        else if (headType === "ellip") headH = D / 4;
+
+        // Simplified vertical calc: Bottom Head + Cylinder
+        if (h <= headH && headType !== "flat") {
+            if (headType === "hemi") vol = (Math.PI * Math.pow(h, 2) * (3 * r - h)) / 3;
+            else vol = (Math.PI * Math.pow(h, 2) * (3 * (D/4) - h)) / 3 * 2; // Approx
+        } else {
+            const headVol = (headType === "hemi") ? (2/3 * Math.PI * Math.pow(r, 3)) : 
+                            (headType === "ellip") ? (Math.PI * Math.pow(D, 3) / 24) : 0;
+            const cylH = h - headH;
+            vol = headVol + (Math.PI * Math.pow(r, 2) * cylH);
+        }
+    }
+    return vol / 1e9; // convert mm3 to m3
+}
+
+function calculateVessel() {
     const D = parseFloat(document.getElementById('diameter').value);
     const L = parseFloat(document.getElementById('length').value);
-    const h = parseFloat(document.getElementById('height').value);
-    const r = D / 2;
+    const hll = parseFloat(document.getElementById('hll').value);
+    const lll = parseFloat(document.getElementById('lll').value);
+    const orientation = document.getElementById('orientation').value;
+    const headType = document.getElementById('headType').value;
 
-    if (h > D) { alert("Level cannot be greater than Diameter!"); return; }
+    if (lll >= hll) { alert("HLL must be greater than LLL!"); return; }
 
-    // 공식: V = [r² * cos⁻¹((r-h)/r) - (r-h) * sqrt(2rh - h²)] * L
-    const term1 = Math.pow(r, 2) * Math.acos((r - h) / r);
-    const term2 = (r - h) * Math.sqrt(2 * r * h - Math.pow(h, 2));
-    const volume_mm3 = (term1 - term2) * L;
-    const volume_m3 = (volume_mm3 / 1e9).toFixed(3);
+    const volHLL = getVolAtH(hll, D, L, orientation, headType);
+    const volLLL = getVolAtH(lll, D, L, orientation, headType);
+    const effectiveVol = (volHLL - volLLL).toFixed(3);
 
-    document.getElementById('result').innerHTML = `Current Liquid Volume: ${volume_m3} m³`;
+    document.getElementById('result-box').style.display = "block";
+    document.getElementById('res-total').innerHTML = `📍 Total Liquid Volume (at HLL): <span style="color:#007bff">${volHLL.toFixed(3)} m³</span>`;
+    document.getElementById('res-effective').innerHTML = `✅ Effective Liquid Volume (HLL-LLL): <span style="color:#27ae60">${effectiveVol} m³</span>`;
 }
 </script>
