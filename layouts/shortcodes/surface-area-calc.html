@@ -1,0 +1,157 @@
+<div id="surface-area-container" style="background: #fdfdfd; padding: 25px; border-radius: 12px; border: 1px solid #eaeaea; margin: 25px 0; color: #2c3e50; font-family: 'Segoe UI', sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+    <h3 style="margin-top:0; border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #007bff;">Equipment Surface Area Calculator</h3>
+    
+    <div style="margin-bottom: 20px;">
+        <label style="font-weight:bold; font-size: 0.85em;">Equipment Shape</label>
+        <select id="shape-select" onchange="toggleInputs()" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: white; font-weight: bold; cursor:pointer;">
+            <option value="vessel">Pressure Vessel (Shell & Heads)</option>
+            <option value="cylinder">Cylindrical Tank (Flat Ends)</option>
+            <option value="sphere">Spherical Tank</option>
+            <option value="rectangular">Rectangular Tank</option>
+        </select>
+    </div>
+
+    <div id="input-fields" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+        </div>
+
+    <button onclick="calculateArea()" style="background: #007bff; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; font-size: 1em; transition: 0.3s;">Calculate Surface Area</button>
+
+    <div id="area-result" style="margin-top: 20px; padding: 15px; background: #eef2f5; border-left: 4px solid #007bff; display:none; line-height: 1.6;">
+        <div id="res-breakdown" style="font-size: 0.9em; color: #555; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 10px;"></div>
+        <div id="res-total" style="font-size: 1.3em; font-weight: bold; color: #2c3e50;"></div>
+    </div>
+</div>
+
+<script>
+function toggleInputs() {
+    const shape = document.getElementById('shape-select').value;
+    const container = document.getElementById('input-fields');
+    let html = '';
+
+    if (shape === 'vessel') {
+        html = `
+            <div>
+                <label style="font-weight:bold; font-size: 0.85em;">Diameter (D, mm)</label>
+                <input type="number" id="v_d" value="2000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            </div>
+            <div>
+                <label style="font-weight:bold; font-size: 0.85em;">Straight Length (L, mm)</label>
+                <input type="number" id="v_l" value="5000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            </div>
+            <div style="grid-column: span 2;">
+                <label style="font-weight:bold; font-size: 0.85em;">Head Type (Both Ends)</label>
+                <select id="v_head" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+                    <option value="ellip">2:1 Ellipsoidal</option>
+                    <option value="hemi">Hemispherical</option>
+                    <option value="flat">Flat</option>
+                </select>
+            </div>
+        `;
+    } else if (shape === 'cylinder') {
+        html = `
+            <div>
+                <label style="font-weight:bold; font-size: 0.85em;">Diameter (D, mm)</label>
+                <input type="number" id="c_d" value="5000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            </div>
+            <div>
+                <label style="font-weight:bold; font-size: 0.85em;">Height/Length (H, mm)</label>
+                <input type="number" id="c_h" value="10000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            </div>
+        `;
+    } else if (shape === 'sphere') {
+        html = `
+            <div style="grid-column: span 2;">
+                <label style="font-weight:bold; font-size: 0.85em;">Sphere Diameter (D, mm)</label>
+                <input type="number" id="s_d" value="15000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            </div>
+        `;
+    } else if (shape === 'rectangular') {
+        html = `
+            <div>
+                <label style="font-weight:bold; font-size: 0.85em;">Length (L, mm)</label>
+                <input type="number" id="r_l" value="4000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            </div>
+            <div>
+                <label style="font-weight:bold; font-size: 0.85em;">Width (W, mm)</label>
+                <input type="number" id="r_w" value="3000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            </div>
+            <div style="grid-column: span 2;">
+                <label style="font-weight:bold; font-size: 0.85em;">Height (H, mm)</label>
+                <input type="number" id="r_h" value="2500" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            </div>
+        `;
+    }
+    container.innerHTML = html;
+    document.getElementById('area-result').style.display = 'none';
+}
+
+function calculateArea() {
+    const shape = document.getElementById('shape-select').value;
+    let totalArea = 0;
+    let breakdown = '';
+
+    if (shape === 'vessel') {
+        const D = parseFloat(document.getElementById('v_d').value) / 1000; // convert to m
+        const L = parseFloat(document.getElementById('v_l').value) / 1000;
+        const headType = document.getElementById('v_head').value;
+
+        if (isNaN(D) || isNaN(L) || D <= 0 || L < 0) { alert("Invalid inputs."); return; }
+
+        const shellArea = Math.PI * D * L;
+        let singleHeadArea = 0;
+
+        if (headType === 'flat') {
+            singleHeadArea = (Math.PI * Math.pow(D, 2)) / 4;
+        } else if (headType === 'hemi') {
+            singleHeadArea = (Math.PI * Math.pow(D, 2)) / 2;
+        } else if (headType === 'ellip') {
+            // Standard approximation for one 2:1 Ellipsoidal Head surface area
+            singleHeadArea = 1.084 * Math.pow(D, 2); 
+        }
+
+        const totalHeadArea = singleHeadArea * 2;
+        totalArea = shellArea + totalHeadArea;
+
+        breakdown = `
+            <div style="display: flex; justify-content: space-between;"><span>Shell Area (Cylinder):</span> <b>${shellArea.toFixed(2)} m²</b></div>
+            <div style="display: flex; justify-content: space-between;"><span>Head Area (Both Ends):</span> <b>${totalHeadArea.toFixed(2)} m²</b></div>
+            <div style="font-size: 0.8em; margin-top: 5px; color: #7f8c8d;">* 1 Head Area: ${singleHeadArea.toFixed(2)} m²</div>
+        `;
+
+    } else if (shape === 'cylinder') {
+        const D = parseFloat(document.getElementById('c_d').value) / 1000;
+        const H = parseFloat(document.getElementById('c_h').value) / 1000;
+        
+        const sideArea = Math.PI * D * H;
+        const topBottomArea = 2 * ((Math.PI * Math.pow(D, 2)) / 4);
+        totalArea = sideArea + topBottomArea;
+
+        breakdown = `
+            <div style="display: flex; justify-content: space-between;"><span>Side Area:</span> <b>${sideArea.toFixed(2)} m²</b></div>
+            <div style="display: flex; justify-content: space-between;"><span>Top & Bottom Area:</span> <b>${topBottomArea.toFixed(2)} m²</b></div>
+        `;
+    } else if (shape === 'sphere') {
+        const D = parseFloat(document.getElementById('s_d').value) / 1000;
+        totalArea = Math.PI * Math.pow(D, 2);
+        breakdown = `<div style="display: flex; justify-content: space-between;"><span>Spherical Surface:</span> <b>${totalArea.toFixed(2)} m²</b></div>`;
+    } else if (shape === 'rectangular') {
+        const L = parseFloat(document.getElementById('r_l').value) / 1000;
+        const W = parseFloat(document.getElementById('r_w').value) / 1000;
+        const H = parseFloat(document.getElementById('r_h').value) / 1000;
+        
+        totalArea = 2 * (L * W + W * H + H * L);
+        breakdown = `
+            <div style="display: flex; justify-content: space-between;"><span>Top & Bottom (L×W):</span> <b>${(2 * L * W).toFixed(2)} m²</b></div>
+            <div style="display: flex; justify-content: space-between;"><span>Front & Back (L×H):</span> <b>${(2 * L * H).toFixed(2)} m²</b></div>
+            <div style="display: flex; justify-content: space-between;"><span>Left & Right (W×H):</span> <b>${(2 * W * H).toFixed(2)} m²</b></div>
+        `;
+    }
+
+    document.getElementById('res-breakdown').innerHTML = breakdown;
+    document.getElementById('res-total').innerHTML = `📍 Total Surface Area: <span style="color:#007bff">${totalArea.toFixed(2)} m²</span>`;
+    document.getElementById('area-result').style.display = 'block';
+}
+
+// Initialize on load
+toggleInputs();
+</script>
