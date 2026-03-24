@@ -8,7 +8,7 @@ Estimating the **Wetted Surface Area** is one of the most critical steps when si
 
 This professional-grade calculator goes beyond simple geometry by fully incorporating the nuances, conservative conventions, and standard-mandated rules of **API STD 521 (Process Vessels)** and **API STD 2000 / KOSHA D-14 (Storage Tanks)**.
 
-**"Distinguishing pure geometry from standard-mandated emergency relief areas."**
+**"Built for process engineers: Inputs align directly with your P&ID and Datasheets using Tangent Line (TL) elevations."**
 
 ---
 
@@ -24,6 +24,9 @@ This professional-grade calculator goes beyond simple geometry by fully incorpor
 
 Calculating the heat input for a fire scenario is not just a matter of asking "how much liquid is currently in the vessel?" The area estimation criteria change significantly depending on the applied design code. To prevent engineering errors, this tool distinctly separates the results into **Step 1 (Raw Geometric Area)** and **Step 2 (API Standard Area)**.
 
+### 💡 Tangent Line (TL) Based Inputs
+Unlike basic calculators that ask for the absolute bottom of the equipment, this tool accepts **Equipment Elevation and Liquid Level (LL) directly referenced from the Tangent Line (TL)** (specifically the BTL for vertical vessels). The internal engine automatically accounts for the bottom head depth based on your selected head type, calculating the true absolute bottom elevation seamlessly.
+
 ### 1. API STD 521 (Process Vessels)
 API 521 applies strict guidelines for estimating the fire-exposed area of pressure vessels:
 
@@ -38,5 +41,5 @@ For atmospheric and low-pressure storage tanks, emergency venting areas are dete
 * **Horizontal Tanks:** Calculated as the **larger** of 75% of the total surface area OR the exposed surface area up to 9.14 m.
 * **Spheres & Spheroids:** Calculated as the **larger** of 55% of the total surface area OR the exposed surface area up to 9.14 m.
 
-### 💡 Geometric Approximations & Robustness
+### ⚙️ Geometric Approximations & Robustness
 This tool is engineered with robust logic to prevent floating-point calculation errors inherent in web browsers. For partial wetted area calculations of horizontal cylinders, it utilizes highly precise **engineering approximations**, properly accounting for circular segment arc lengths and the surface curvature of 2:1 ellipsoidal heads, ensuring reliable and practical results for your process design workflow.
