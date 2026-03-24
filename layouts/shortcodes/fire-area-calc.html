@@ -47,12 +47,12 @@
             <input type="number" id="f_source" value="0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
         </div>
         <div>
-            <label style="font-weight:bold; font-size: 0.85em;">Equip. Bottom Elev. (m)</label>
-            <input type="number" id="f_elev" value="2.0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            <label style="font-weight:bold; font-size: 0.85em;">Equip. Elev. (m)</label>
+            <input type="number" id="f_elev" value="2.0" title="Elevation to BTL (Vertical) or Bottom (Horizontal)" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
         </div>
         <div id="div_ll">
             <label style="font-weight:bold; font-size: 0.85em;">Liquid Level (m)</label>
-            <input type="number" id="f_ll" value="1.5" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+            <input type="number" id="f_ll" value="1.5" title="Level from BTL (Vertical) or Bottom (Horizontal)" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
         </div>
     </div>
 
@@ -149,10 +149,20 @@ function calculateFireArea() {
     const eqElev = parseFloat(document.getElementById('f_elev').value);
     const LL = parseFloat(document.getElementById('f_ll').value);
     
+    const R = D / 2;
+    let headDepth = 0;
+    if (type === 'vertical') {
+        headDepth = (headType === 'flat') ? 0 : (headType === 'hemi') ? R : D / 4;
+    }
+
+    // Validations
     if (isNaN(D) || D <= 0) { alert("Invalid Diameter: Must be > 0."); return; }
     if (type !== 'sphere' && (isNaN(L) || L < 0)) { alert("Invalid Length: Must be >= 0."); return; }
-    if (isNaN(srcElev) || isNaN(eqElev)) { alert("Invalid Elevations."); return; }
-    if (isNaN(LL) || LL < 0) { alert("Invalid Liquid Level: Must be >= 0."); return; }
+    if (isNaN(srcElev) || isNaN(eqElev) || isNaN(LL)) { alert("Invalid Elevations or Liquid Level."); return; }
+    
+    // Allow negative LL for vertical vessels (liquid inside the bottom head), but not below the absolute bottom
+    if (type === 'vertical' && LL < -headDepth) { alert("Liquid Level cannot be lower than the bottom of the head."); return; }
+    if (type !== 'vertical' && LL < 0) { alert("Liquid Level must be >= 0 for horizontal/spherical equipment."); return; }
     if (type === 'horizontal' && LL > D) { alert("Liquid Level cannot exceed Diameter for horizontal vessels."); return; }
     if (type === 'sphere' && LL > D) { alert("Liquid Level cannot exceed Diameter for spheres."); return; }
 
@@ -160,7 +170,11 @@ function calculateFireArea() {
 
     const flameLimit = std === 'api521' ? 7.6 : 9.14; 
     const maxExposedElevation = srcElev + flameLimit;
-    const exposedHeight = maxExposedElevation - eqElev;
+    
+    // Absolute bottom elevation and absolute liquid height
+    const absEqElev = (type === 'vertical') ? eqElev - headDepth : eqElev;
+    const absLL = (type === 'vertical') ? LL + headDepth : LL;
+    const exposedHeight = maxExposedElevation - absEqElev;
 
     if (isUnwetted) {
         document.getElementById('f-res-params').innerHTML = `<b>Unwetted Vessel Case</b>`;
@@ -171,21 +185,20 @@ function calculateFireArea() {
     }
 
     if (exposedHeight <= 0) {
-        document.getElementById('f-res-params').innerHTML = `Exposed Height: ${exposedHeight.toFixed(2)} m (Above flame limit)`;
+        document.getElementById('f-res-params').innerHTML = `Exposed Height: ${exposedHeight.toFixed(2)} m (Equipment is above flame limit)`;
         document.getElementById('f-res-raw').innerHTML = `Wetted Area: 0.00 m²`;
         document.getElementById('f-res-std').innerHTML = `0.00 m²`;
         document.getElementById('fire-result').style.display = 'block';
         return;
     }
 
-    const heff = Math.min(LL, exposedHeight);
-    const R = D / 2;
+    const heff = Math.min(absLL, exposedHeight); // Effective wetted height from absolute bottom
     let rawArea = 0, stdArea = null;
     let rawBreakdown = '', stdBreakdown = '';
 
     if (type === 'sphere') {
         rawArea = 2 * Math.PI * R * heff; 
-        rawBreakdown = `Spherical Cap Approx (up to ${heff.toFixed(2)}m): ${rawArea.toFixed(2)} m²`;
+        rawBreakdown = `Spherical Cap Approx (up to ${heff.toFixed(2)}m from bottom): ${rawArea.toFixed(2)} m²`;
 
         const fullArea = Math.PI * Math.pow(D, 2);
         if (std === 'api521') {
@@ -214,14 +227,15 @@ function calculateFireArea() {
     } 
     else if (type === 'vertical') {
         if (std === 'api2000') {
-            let calcH = Math.min(L, exposedHeight);
-            rawArea = Math.PI * D * Math.min(L, LL); 
+            // API 2000 vertical: Shell area up to 9.14m from TL (eqElev)
+            let shellExposedHeight = Math.max(0, maxExposedElevation - eqElev);
+            let calcH = Math.min(L, shellExposedHeight);
+            rawArea = Math.PI * D * Math.max(0, Math.min(L, LL)); 
             rawBreakdown = `Wetted Shell Area (Raw): ${rawArea.toFixed(2)} m²`;
             
             stdArea = Math.PI * D * calcH;
             stdBreakdown = `KOSHA D-14 / API 2000 standard area: shell area up to 9.14m only; bottom excluded.<br><span style="font-size:0.8em; color:#7f8c8d;">* Independent of actual liquid level input.</span>`;
         } else {
-            let headDepth = (headType === 'flat') ? 0 : (headType === 'hemi') ? R : D / 4;
             let shellCalcH = 0, bottomArea = 0;
             let flatNote = '';
 
@@ -247,9 +261,12 @@ function calculateFireArea() {
         }
     }
 
+    let tL_note = (type === 'vertical') ? `<br><b>Absolute Bottom Elev:</b> ${absEqElev.toFixed(2)} m <i>(TL offset by head depth)</i>` : '';
+    
     document.getElementById('f-res-params').innerHTML = `
-        <b>Limit:</b> Flame Elev (${srcElev}m) + Reach (${flameLimit}m) = Max Flame Elev (${maxExposedElevation}m)<br>
-        <b>Exposed Height:</b> ${exposedHeight.toFixed(2)} m above equipment bottom
+        <b>Limit:</b> Flame Elev (${srcElev}m) + Reach (${flameLimit}m) = Max Flame Elev (${maxExposedElevation}m)
+        ${tL_note}
+        <br><b>Exposed Height:</b> ${exposedHeight.toFixed(2)} m above absolute bottom
     `;
     
     document.getElementById('f-res-raw').innerHTML = rawBreakdown;
