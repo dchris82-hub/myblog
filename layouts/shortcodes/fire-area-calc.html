@@ -1,0 +1,195 @@
+<script>
+function toggleFields() {
+    const std = document.getElementById('f_std').value;
+    const type = document.getElementById('f_type').value;
+    const opts = document.getElementById('api-options');
+    
+    document.getElementById('div_l').style.display = (type === 'sphere') ? 'none' : 'block';
+    
+    if (type === 'sphere' || (std === 'api2000' && type === 'vertical')) {
+        document.getElementById('div_head').style.display = 'none';
+    } else {
+        document.getElementById('div_head').style.display = 'block';
+    }
+
+    if (std === 'api521') {
+        opts.innerHTML = `
+            <label style="cursor:pointer; display:flex; align-items:center;">
+                <input type="checkbox" id="f_unwetted" style="margin-right:8px;"> 
+                <span><b>Unwetted Vessel (Gas/Vapor)</b></span>
+            </label>
+        `;
+    } else {
+        opts.innerHTML = `<i>KOSHA D-14 / API 2000 standard rules (e.g., 55%, 75%, Shell-only up to 9.14m) apply.</i>`;
+    }
+    document.getElementById('fire-result').style.display = 'none';
+}
+
+function getFullHeadAreaApprox(D, headType) {
+    const R = D / 2;
+    if (headType === 'flat') return Math.PI * R * R;
+    if (headType === 'hemi') return 2 * Math.PI * R * R;
+    return 1.084 * D * D; 
+}
+
+function getEllipsoidalHeadPartialAreaApprox(D, h) {
+    if (h <= 0) return 0;
+    if (h >= D) return 1.084 * Math.pow(D, 2); 
+    const r = h / D;
+    const TotalArea = 1.084 * Math.pow(D, 2);
+    
+    // Floating-point error protection for the square root
+    const seg = Math.max(0, r - r * r);
+    let fraction = (Math.acos(1 - 2*r) - 2*(1-2*r)*Math.sqrt(seg)) / Math.PI;
+    let approx_fraction = fraction + 0.05 * Math.sin(Math.PI * r); 
+    
+    return TotalArea * Math.min(approx_fraction, 1);
+}
+
+// Protected Horizontal Area Function
+function getHorizontalAreaAtHeight(D, L, h, headType) {
+    h = Math.max(0, Math.min(h, D)); // Safety clamp
+    let R = D / 2;
+    let theta = 2 * Math.acos(1 - (h / R));
+    if (h >= D) theta = 2 * Math.PI;
+
+    let shellArea = R * theta * L;
+    let oneHeadArea = 0;
+
+    if (headType === 'flat') {
+        oneHeadArea = R * R * Math.acos(1 - h / R) - (R - h) * Math.sqrt(Math.max(0, 2 * R * h - h * h));
+    } else if (headType === 'hemi') {
+        oneHeadArea = 2 * Math.PI * R * h; 
+    } else {
+        oneHeadArea = getEllipsoidalHeadPartialAreaApprox(D, h);
+    }
+    return shellArea + (2 * oneHeadArea);
+}
+
+function calculateFireArea() {
+    const std = document.getElementById('f_std').value;
+    const type = document.getElementById('f_type').value;
+    const D = parseFloat(document.getElementById('f_d').value);
+    const L = parseFloat(document.getElementById('f_l').value) || 0;
+    const headType = document.getElementById('f_head').value; // Simplified DOM call
+    const srcElev = parseFloat(document.getElementById('f_source').value);
+    const eqElev = parseFloat(document.getElementById('f_elev').value);
+    const LL = parseFloat(document.getElementById('f_ll').value);
+    
+    // Validations
+    if (isNaN(D) || D <= 0) { alert("Invalid Diameter: Must be > 0."); return; }
+    if (type !== 'sphere' && (isNaN(L) || L < 0)) { alert("Invalid Length: Must be >= 0."); return; }
+    if (isNaN(srcElev) || isNaN(eqElev)) { alert("Invalid Elevations."); return; }
+    if (isNaN(LL) || LL < 0) { alert("Invalid Liquid Level: Must be >= 0."); return; }
+    if (type === 'horizontal' && LL > D) { alert("Liquid Level cannot exceed Diameter for horizontal vessels."); return; }
+    if (type === 'sphere' && LL > D) { alert("Liquid Level cannot exceed Diameter for spheres."); return; }
+
+    const isUnwetted = document.getElementById('f_unwetted') && document.getElementById('f_unwetted').checked;
+
+    const flameLimit = std === 'api521' ? 7.6 : 9.14; 
+    const maxExposedElevation = srcElev + flameLimit;
+    const exposedHeight = maxExposedElevation - eqElev;
+
+    if (isUnwetted) {
+        document.getElementById('f-res-params').innerHTML = `<b>Unwetted Vessel Case</b>`;
+        document.getElementById('f-res-raw').innerHTML = `Wetted Area: N/A`;
+        document.getElementById('f-res-std').innerHTML = `N/A <br><span style="font-size:0.75em; color:#7f8c8d; font-weight:normal;">Use API 521 unwetted-surface gas/vapor fire-relief method instead.</span>`;
+        document.getElementById('fire-result').style.display = 'block';
+        return;
+    }
+
+    if (exposedHeight <= 0) {
+        document.getElementById('f-res-params').innerHTML = `Exposed Height: ${exposedHeight.toFixed(2)} m (Above flame limit)`;
+        document.getElementById('f-res-raw').innerHTML = `Wetted Area: 0.00 m²`;
+        document.getElementById('f-res-std').innerHTML = `0.00 m²`;
+        document.getElementById('fire-result').style.display = 'block';
+        return;
+    }
+
+    const heff = Math.min(LL, exposedHeight);
+    const R = D / 2;
+    let rawArea = 0, stdArea = null;
+    let rawBreakdown = '', stdBreakdown = '';
+
+    // --- SPHERE ---
+    if (type === 'sphere') {
+        rawArea = 2 * Math.PI * R * heff; 
+        rawBreakdown = `Spherical Cap Approx (up to ${heff.toFixed(2)}m): ${rawArea.toFixed(2)} m²`;
+
+        const fullArea = Math.PI * Math.pow(D, 2);
+        if (std === 'api521') {
+            let calcH = Math.max(R, Math.min(exposedHeight, D));
+            stdArea = 2 * Math.PI * R * calcH;
+            stdBreakdown = `API 521 conservative convention (minimum bottom hemisphere): ${stdArea.toFixed(2)} m² <br><span style="font-size:0.8em; color:#7f8c8d;">* Conservative standard convention, independent of actual LL input if partially filled.</span>`;
+        } else {
+            let areaUpToLimit = 2 * Math.PI * R * Math.min(D, exposedHeight);
+            stdArea = Math.max(0.55 * fullArea, areaUpToLimit);
+            stdBreakdown = `Area up to 9.14m: ${areaUpToLimit.toFixed(2)} m² <br>55% of Total: ${(0.55*fullArea).toFixed(2)} m² <br><span style="font-size:0.8em; color:#7f8c8d;">* Independent of actual liquid level input.</span>`;
+        }
+    } 
+    // --- HORIZONTAL CYLINDER ---
+    else if (type === 'horizontal') {
+        rawArea = getHorizontalAreaAtHeight(D, L, heff, headType);
+        rawBreakdown = `Geometric Area at LL=${LL}m (capped at exposed height): ${rawArea.toFixed(2)} m²`;
+
+        if (std === 'api2000') {
+            const fullArea = (Math.PI * D * L) + (2 * getFullHeadAreaApprox(D, headType));
+            let areaUpToLimit = getHorizontalAreaAtHeight(D, L, Math.min(D, exposedHeight), headType);
+            stdArea = Math.max(0.75 * fullArea, areaUpToLimit);
+            stdBreakdown = `Geometric Area up to 9.14m: ${areaUpToLimit.toFixed(2)} m² <br>75% of Total Area: ${(0.75*fullArea).toFixed(2)} m² <br><span style="font-size:0.8em; color:#7f8c8d;">* Independent of actual liquid level input.</span>`;
+        } else {
+            stdArea = rawArea;
+            stdBreakdown = `Matches Raw Geometric Area.`;
+        }
+    } 
+    // --- VERTICAL CYLINDER ---
+    else if (type === 'vertical') {
+        if (std === 'api2000') {
+            let calcH = Math.min(L, exposedHeight);
+            rawArea = Math.PI * D * Math.min(L, LL); 
+            rawBreakdown = `Wetted Shell Area (Raw): ${rawArea.toFixed(2)} m²`;
+            
+            stdArea = Math.PI * D * calcH;
+            stdBreakdown = `KOSHA D-14 / API 2000 standard area: shell area up to 9.14m only; bottom excluded.<br><span style="font-size:0.8em; color:#7f8c8d;">* Independent of actual liquid level input.</span>`;
+        } else {
+            let headDepth = (headType === 'flat') ? 0 : (headType === 'hemi') ? R : D / 4;
+            let shellCalcH = 0, bottomArea = 0;
+            let flatNote = '';
+
+            if (headType === 'flat') {
+                bottomArea = heff > 0 ? getFullHeadAreaApprox(D, headType) : 0;
+                shellCalcH = Math.max(0, Math.min(L, heff));
+                if (heff > 0) flatNote = ` <span style="font-size:0.8em; color:#7f8c8d;">(Full bottom conservatively applied for h > 0)</span>`;
+            } else if (heff > headDepth) {
+                bottomArea = getFullHeadAreaApprox(D, headType);
+                shellCalcH = Math.max(0, Math.min(L, heff - headDepth));
+            } else {
+                let headFraction = Math.pow(heff / headDepth, 0.8);
+                bottomArea = getFullHeadAreaApprox(D, headType) * headFraction;
+                shellCalcH = 0;
+            }
+            
+            const shellArea = Math.PI * D * shellCalcH;
+            rawArea = shellArea + bottomArea;
+            rawBreakdown = `Bottom Head Area Approx.: ${bottomArea.toFixed(2)} m²${flatNote} <br>Shell Area: ${shellArea.toFixed(2)} m²`;
+            
+            stdArea = rawArea;
+            stdBreakdown = `Matches Raw Geometric Area.`;
+        }
+    }
+
+    document.getElementById('f-res-params').innerHTML = `
+        <b>Limit:</b> Flame Elev (${srcElev}m) + Reach (${flameLimit}m) = Max Flame Elev (${maxExposedElevation}m)<br>
+        <b>Exposed Height:</b> ${exposedHeight.toFixed(2)} m above equipment bottom
+    `;
+    
+    document.getElementById('f-res-raw').innerHTML = rawBreakdown;
+    
+    const stdAreaText = (stdArea === null || stdArea === undefined) ? 'N/A' : `${stdArea.toFixed(2)} m²`;
+    document.getElementById('f-res-std').innerHTML = `${stdAreaText} <br><span style="font-size:0.85em; font-weight:normal; color:#555;">${stdBreakdown}</span>`;
+    
+    document.getElementById('fire-result').style.display = 'block';
+}
+
+toggleFields();
+</script>
