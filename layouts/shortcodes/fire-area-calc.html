@@ -1,3 +1,78 @@
+<div id="fire-calc-container" style="background: #fdfdfd; padding: 25px; border-radius: 12px; border: 1px solid #eaeaea; margin: 25px 0; color: #2c3e50; font-family: 'Segoe UI', sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+    <h3 style="margin-top:0; border-bottom: 2px solid #e74c3c; padding-bottom: 10px; color: #e74c3c;">🔥 Fire Case Wetted Area Calculator</h3>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+        <div>
+            <label style="font-weight:bold; font-size: 0.85em;">Design Standard</label>
+            <select id="f_std" onchange="toggleFields()" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+                <option value="api521">API STD 521 (Process Vessel)</option>
+                <option value="api2000">API STD 2000 / KOSHA (Storage Tank)</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-weight:bold; font-size: 0.85em;">Equipment Type</label>
+            <select id="f_type" onchange="toggleFields()" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+                <option value="horizontal">Horizontal Cylinder</option>
+                <option value="vertical">Vertical Cylinder</option>
+                <option value="sphere">Sphere</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="api-options" style="background: #fff3ed; padding: 12px; border-left: 4px solid #e67e22; margin-bottom: 15px; font-size: 0.9em; border-radius: 4px;">
+        </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+        <div>
+            <label style="font-weight:bold; font-size: 0.85em;">Diameter (D, m)</label>
+            <input type="number" id="f_d" value="3.0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+        <div id="div_l">
+            <label style="font-weight:bold; font-size: 0.85em;">T/T Length (L, m)</label>
+            <input type="number" id="f_l" value="6.0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+        <div id="div_head" style="grid-column: span 2;">
+            <label style="font-weight:bold; font-size: 0.85em;">Head Type</label>
+            <select id="f_head" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+                <option value="ellip">2:1 Ellipsoidal</option>
+                <option value="hemi">Hemispherical</option>
+                <option value="flat">Flat</option>
+            </select>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+        <div>
+            <label style="font-weight:bold; font-size: 0.85em;">Flame Source Elev. (m)</label>
+            <input type="number" id="f_source" value="0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+        <div>
+            <label style="font-weight:bold; font-size: 0.85em;">Equip. Bottom Elev. (m)</label>
+            <input type="number" id="f_elev" value="2.0" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+        <div id="div_ll">
+            <label style="font-weight:bold; font-size: 0.85em;">Liquid Level (m)</label>
+            <input type="number" id="f_ll" value="1.5" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        </div>
+    </div>
+
+    <button onclick="calculateFireArea()" style="background: #e74c3c; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; font-size: 1em; transition: 0.3s;">Calculate Wetted Area</button>
+
+    <div id="fire-result" style="margin-top: 20px; padding: 15px; background: #fdfdfd; border: 1px solid #ddd; border-radius: 5px; display:none;">
+        <div id="f-res-params" style="font-size: 0.85em; color: #555; margin-bottom: 12px; line-height: 1.5; border-bottom: 1px dashed #ccc; padding-bottom: 10px;"></div>
+        
+        <div style="margin-bottom: 15px;">
+            <div style="font-weight:bold; color:#2980b9; margin-bottom:5px;">Step 1: Raw Geometric Wetted Area (Based on LL)</div>
+            <div id="f-res-raw" style="font-size: 0.9em; line-height: 1.6; padding-left: 10px; border-left: 3px solid #3498db;"></div>
+        </div>
+
+        <div>
+            <div style="font-weight:bold; color:#c0392b; margin-bottom:5px;">Step 2: API Standard Area</div>
+            <div id="f-res-std" style="font-size: 1.1em; font-weight: bold; padding-left: 10px; border-left: 3px solid #e74c3c;"></div>
+        </div>
+    </div>
+</div>
+
 <script>
 function toggleFields() {
     const std = document.getElementById('f_std').value;
@@ -38,7 +113,6 @@ function getEllipsoidalHeadPartialAreaApprox(D, h) {
     const r = h / D;
     const TotalArea = 1.084 * Math.pow(D, 2);
     
-    // Floating-point error protection for the square root
     const seg = Math.max(0, r - r * r);
     let fraction = (Math.acos(1 - 2*r) - 2*(1-2*r)*Math.sqrt(seg)) / Math.PI;
     let approx_fraction = fraction + 0.05 * Math.sin(Math.PI * r); 
@@ -46,9 +120,8 @@ function getEllipsoidalHeadPartialAreaApprox(D, h) {
     return TotalArea * Math.min(approx_fraction, 1);
 }
 
-// Protected Horizontal Area Function
 function getHorizontalAreaAtHeight(D, L, h, headType) {
-    h = Math.max(0, Math.min(h, D)); // Safety clamp
+    h = Math.max(0, Math.min(h, D)); 
     let R = D / 2;
     let theta = 2 * Math.acos(1 - (h / R));
     if (h >= D) theta = 2 * Math.PI;
@@ -71,12 +144,11 @@ function calculateFireArea() {
     const type = document.getElementById('f_type').value;
     const D = parseFloat(document.getElementById('f_d').value);
     const L = parseFloat(document.getElementById('f_l').value) || 0;
-    const headType = document.getElementById('f_head').value; // Simplified DOM call
+    const headType = document.getElementById('f_head').value; 
     const srcElev = parseFloat(document.getElementById('f_source').value);
     const eqElev = parseFloat(document.getElementById('f_elev').value);
     const LL = parseFloat(document.getElementById('f_ll').value);
     
-    // Validations
     if (isNaN(D) || D <= 0) { alert("Invalid Diameter: Must be > 0."); return; }
     if (type !== 'sphere' && (isNaN(L) || L < 0)) { alert("Invalid Length: Must be >= 0."); return; }
     if (isNaN(srcElev) || isNaN(eqElev)) { alert("Invalid Elevations."); return; }
@@ -111,7 +183,6 @@ function calculateFireArea() {
     let rawArea = 0, stdArea = null;
     let rawBreakdown = '', stdBreakdown = '';
 
-    // --- SPHERE ---
     if (type === 'sphere') {
         rawArea = 2 * Math.PI * R * heff; 
         rawBreakdown = `Spherical Cap Approx (up to ${heff.toFixed(2)}m): ${rawArea.toFixed(2)} m²`;
@@ -127,7 +198,6 @@ function calculateFireArea() {
             stdBreakdown = `Area up to 9.14m: ${areaUpToLimit.toFixed(2)} m² <br>55% of Total: ${(0.55*fullArea).toFixed(2)} m² <br><span style="font-size:0.8em; color:#7f8c8d;">* Independent of actual liquid level input.</span>`;
         }
     } 
-    // --- HORIZONTAL CYLINDER ---
     else if (type === 'horizontal') {
         rawArea = getHorizontalAreaAtHeight(D, L, heff, headType);
         rawBreakdown = `Geometric Area at LL=${LL}m (capped at exposed height): ${rawArea.toFixed(2)} m²`;
@@ -142,7 +212,6 @@ function calculateFireArea() {
             stdBreakdown = `Matches Raw Geometric Area.`;
         }
     } 
-    // --- VERTICAL CYLINDER ---
     else if (type === 'vertical') {
         if (std === 'api2000') {
             let calcH = Math.min(L, exposedHeight);
