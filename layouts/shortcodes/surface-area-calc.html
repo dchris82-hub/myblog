@@ -90,12 +90,19 @@ function calculateArea() {
     let totalArea = 0;
     let breakdown = '';
 
+    // 에러 메시지 처리를 위해 기존 결과창 숨기기
+    document.getElementById('area-result').style.display = 'none';
+
     if (shape === 'vessel') {
-        const D = parseFloat(document.getElementById('v_d').value) / 1000; // convert to m
+        const D = parseFloat(document.getElementById('v_d').value) / 1000; 
         const L = parseFloat(document.getElementById('v_l').value) / 1000;
         const headType = document.getElementById('v_head').value;
 
-        if (isNaN(D) || isNaN(L) || D <= 0 || L < 0) { alert("Invalid inputs."); return; }
+        // Validation
+        if (isNaN(D) || isNaN(L) || D <= 0 || L < 0) { 
+            alert("⚠️ Invalid input: Diameter must be > 0 and Length must be ≥ 0."); 
+            return; 
+        }
 
         const shellArea = Math.PI * D * L;
         let singleHeadArea = 0;
@@ -105,7 +112,6 @@ function calculateArea() {
         } else if (headType === 'hemi') {
             singleHeadArea = (Math.PI * Math.pow(D, 2)) / 2;
         } else if (headType === 'ellip') {
-            // Standard approximation for one 2:1 Ellipsoidal Head surface area
             singleHeadArea = 1.084 * Math.pow(D, 2); 
         }
 
@@ -122,6 +128,12 @@ function calculateArea() {
         const D = parseFloat(document.getElementById('c_d').value) / 1000;
         const H = parseFloat(document.getElementById('c_h').value) / 1000;
         
+        // Validation
+        if (isNaN(D) || isNaN(H) || D <= 0 || H < 0) { 
+            alert("⚠️ Invalid input: Diameter must be > 0 and Height must be ≥ 0."); 
+            return; 
+        }
+
         const sideArea = Math.PI * D * H;
         const topBottomArea = 2 * ((Math.PI * Math.pow(D, 2)) / 4);
         totalArea = sideArea + topBottomArea;
@@ -130,14 +142,29 @@ function calculateArea() {
             <div style="display: flex; justify-content: space-between;"><span>Side Area:</span> <b>${sideArea.toFixed(2)} m²</b></div>
             <div style="display: flex; justify-content: space-between;"><span>Top & Bottom Area:</span> <b>${topBottomArea.toFixed(2)} m²</b></div>
         `;
+
     } else if (shape === 'sphere') {
         const D = parseFloat(document.getElementById('s_d').value) / 1000;
+        
+        // Validation
+        if (isNaN(D) || D <= 0) { 
+            alert("⚠️ Invalid input: Diameter must be strictly greater than 0."); 
+            return; 
+        }
+
         totalArea = Math.PI * Math.pow(D, 2);
         breakdown = `<div style="display: flex; justify-content: space-between;"><span>Spherical Surface:</span> <b>${totalArea.toFixed(2)} m²</b></div>`;
+
     } else if (shape === 'rectangular') {
         const L = parseFloat(document.getElementById('r_l').value) / 1000;
         const W = parseFloat(document.getElementById('r_w').value) / 1000;
         const H = parseFloat(document.getElementById('r_h').value) / 1000;
+        
+        // Validation
+        if (isNaN(L) || isNaN(W) || isNaN(H) || L <= 0 || W <= 0 || H <= 0) { 
+            alert("⚠️ Invalid input: All dimensions (L, W, H) must be strictly greater than 0."); 
+            return; 
+        }
         
         totalArea = 2 * (L * W + W * H + H * L);
         breakdown = `
@@ -147,6 +174,7 @@ function calculateArea() {
         `;
     }
 
+    // 결과 출력
     document.getElementById('res-breakdown').innerHTML = breakdown;
     document.getElementById('res-total').innerHTML = `📍 Total Surface Area: <span style="color:#007bff">${totalArea.toFixed(2)} m²</span>`;
     document.getElementById('area-result').style.display = 'block';
