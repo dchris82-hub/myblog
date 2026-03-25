@@ -47,19 +47,21 @@ if (btnCalcSteam) {
     btnCalcSteam.addEventListener('click', calculateSteam);
 }
 
-let rkFallback = false; // Global flag for RK EOS fallback warning
+let rkFallback = false;
 
 function fmt(val, digits = 3) {
     return Number.isFinite(val) ? val.toFixed(digits) : "-";
 }
 
 // --- Core Thermodynamic Functions ---
+
+// 💡 Fixed: Corrected IAPWS-95 Wagner Exponents and Coefficients!
 function getPsat(T) {
     if (T < 273.15 || T > 647.096) return NaN;
     const Tc = 647.096, Pc = 22.064;
     const tau = 1 - T / Tc;
-    const a1 = -7.85951783, a2 = 1.84408259, a3 = -11.7866497, a4 = 22.6807411, a5 = -15.9618719;
-    const term = (a1 * tau + a2 * Math.pow(tau, 1.5) + a3 * Math.pow(tau, 3) + a4 * Math.pow(tau, 6) + a5 * Math.pow(tau, 7.5)) * (Tc / T);
+    const a1 = -7.85951783, a2 = 1.84408259, a3 = -11.7866497, a4 = 22.6807411, a5 = -15.9618719, a6 = 1.80122502;
+    const term = (a1 * tau + a2 * Math.pow(tau, 1.5) + a3 * Math.pow(tau, 3) + a4 * Math.pow(tau, 3.5) + a5 * Math.pow(tau, 4) + a6 * Math.pow(tau, 7.5)) * (Tc / T);
     return Pc * Math.exp(term); 
 }
 
@@ -122,7 +124,6 @@ function getKCondL(T) {
     return -0.432 + 0.0057255*T - 8.078e-6*T*T + 1.861e-9*T*T*T;
 }
 
-// Surface Tension (returns N/m)
 function getSurfTension(T) {
     const Tr = T / 647.096;
     if (Tr >= 1) return 0;
@@ -242,7 +243,7 @@ function calculateSteam() {
 
         if (mode === "sub") {
             document.getElementById('st-res-state').innerText = "Phase: Subcooled Liquid";
-            H_val = H_L + (1/Rho_L) * (P_MPa - getPsat(T_K))*1000; // rough approximation
+            H_val = H_L + (1/Rho_L) * (P_MPa - getPsat(T_K))*1000; 
             S_val = S_L; Cp_val = Cp_L; Rho_val = Rho_L; Visc_val = Visc_L_cP; K_val = K_L; Surf_val = Surf;
         } else {
             document.getElementById('st-res-state').innerText = "Phase: Superheated Steam";
