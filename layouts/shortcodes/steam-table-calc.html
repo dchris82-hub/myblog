@@ -1,11 +1,11 @@
 <div id="steam-calc-container" style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #dee2e6; margin: 25px 0; color: #333; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
     <h3 style="margin-top:0; border-bottom: 2px solid #3498db; padding-bottom: 12px; color: #2c3e50;">💧 Steam Properties Estimator</h3>
-    
+
     <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 0.85em; color: #555; border-left: 4px solid #3498db;">
         • <b>Saturated Mode:</b> Enter <i>only</i> P or T. (Range: 0.01–220 bar / 0.01–373.9 °C)<br>
         • <b>P-T Mode (Sub/Super):</b> Enter <i>both</i> P and T. (Range: 0.01–200 bar / 0–500 °C)
     </div>
-    
+
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
         <div style="display: flex; flex-direction: column;">
             <label style="font-weight:bold; font-size: 0.85em; margin-bottom: 6px; color: #444;">Pressure (P, bar abs)</label>
@@ -24,20 +24,20 @@
             <div id="st-res-state" style="font-weight:bold; font-size:1.1em; color:#d35400; margin-bottom:5px;"></div>
             <div id="st-res-params" style="font-size: 0.95em; color: #2c3e50;"></div>
         </div>
-        
+
         <table style="width: 100%; border-collapse: collapse; border: 1px solid #dee2e6; border-radius: 6px; overflow: hidden; font-size: 0.9em;">
             <thead id="st-table-head" style="background: #f1f3f5; color: #495057;"></thead>
             <tbody id="st-table-body" style="background: white;"></tbody>
         </table>
-        
+
         <div id="st-rk-warning" style="display:none; color: #721c24; background: #f8d7da; padding: 10px; margin-top: 15px; font-size: 0.85em; border-radius: 6px; text-align: center;">
             ⚠️ Vapor density calculation reverted to ideal-gas fallback.
         </div>
 
         <div style="background: #fdfae8; border-left: 4px solid #f1c40f; padding: 12px; margin-top: 20px; font-size: 0.8em; color: #7f8c8d; line-height: 1.5;">
             <b>⚠️ Engineering Disclaimer</b><br>
-            * Based on browser-level empirical estimations (Wagner Equations, DIPPR).<br>
-            * Vapor density utilizes RK EOS compressibility factor ($Z$).<br>
+            * Based on browser-level empirical estimations (Wagner equations, DIPPR-style correlations).<br>
+            * Vapor density utilizes RK EOS compressibility factor (Z).<br>
             * <b>Reference State:</b> Enthalpy/Entropy referenced to liquid water at 273.16 K.<br>
             * <i>Intended for preliminary sizing only. Not equivalent to certified IAPWS-IF97 data.</i>
         </div>
@@ -50,184 +50,291 @@ if (btnCalcSteam) {
     btnCalcSteam.addEventListener('click', calculateSteam);
 }
 
-let rkFallback = false;
-
 function fmt(val, digits = 3) {
     return Number.isFinite(val) ? val.toFixed(digits) : "-";
 }
 
-// --- Core Thermodynamic Functions ---
+// -------------------- Core Thermodynamic Functions --------------------
 
 function getPsat(T) {
     if (T < 273.15 || T > 647.096) return NaN;
-    const Tc = 647.096, Pc = 22.064;
+
+    const Tc = 647.096;
+    const Pc = 22.064; // MPa
     const tau = 1 - T / Tc;
-    const a1 = -7.85951783, a2 = 1.84408259, a3 = -11.7866497, a4 = 22.6807411, a5 = -15.9618719, a6 = 1.80122502;
-    const term = (a1 * tau + a2 * Math.pow(tau, 1.5) + a3 * Math.pow(tau, 3) + a4 * Math.pow(tau, 3.5) + a5 * Math.pow(tau, 4) + a6 * Math.pow(tau, 7.5)) * (Tc / T);
-    return Pc * Math.exp(term); 
+
+    const a1 = -7.85951783;
+    const a2 =  1.84408259;
+    const a3 = -11.7866497;
+    const a4 = 22.6807411;
+    const a5 = -15.9618719;
+    const a6 =  1.80122502;
+
+    const term =
+        (a1 * tau +
+         a2 * Math.pow(tau, 1.5) +
+         a3 * Math.pow(tau, 3) +
+         a4 * Math.pow(tau, 3.5) +
+         a5 * Math.pow(tau, 4) +
+         a6 * Math.pow(tau, 7.5)) * (Tc / T);
+
+    return Pc * Math.exp(term); // MPa
 }
 
 function getTsat(P) {
+    // P in MPa
     if (P <= 0.000611 || P > 22.064) return NaN;
-    let T_low = 273.15, T_high = 647.096, T_mid;
-    for (let i = 0; i < 50; i++) {
-        T_mid = (T_low + T_high) / 2;
-        let P_mid = getPsat(T_mid);
+
+    let T_low = 273.15;
+    let T_high = 647.096;
+    let T_mid = NaN;
+
+    for (let i = 0; i < 60; i++) {
+        T_mid = 0.5 * (T_low + T_high);
+        const P_mid = getPsat(T_mid);
+
+        if (!Number.isFinite(P_mid)) return NaN;
         if (Math.abs(P_mid - P) < 1e-6 || (T_high - T_low) < 1e-6) break;
+
         if (P_mid < P) T_low = T_mid;
         else T_high = T_mid;
     }
+
     return T_mid;
 }
 
 function getHvap(T) {
-    const Tr = Math.max(0, Math.min(T / 647.096, 1));
+    const Tc = 647.096;
+    const Tr = Math.max(0, Math.min(T / Tc, 1));
     if (Tr >= 1) return 0;
-    const A = 5.2053e7, B = 0.3199, C = -0.212, D = 0.25795;
+
+    const A = 5.2053e7;
+    const B = 0.3199;
+    const C = -0.212;
+    const D = 0.25795;
+
     const H_j_kmol = A * Math.pow(1 - Tr, B + C * Tr + D * Tr * Tr);
-    return H_j_kmol / 18.01528 / 1000; 
+    return H_j_kmol / 18.01528 / 1000; // kJ/kg
 }
 
-// 💡 FIXED: Replaced with the highly accurate Wagner Liquid Density Correlation
+// Wagner-type liquid density correlation
 function getRhoL(T) {
     if (T < 273.15 || T > 647.096) return NaN;
+
     const Tc = 647.096;
-    const rhoc = 322.0; 
+    const rhoc = 322.0; // kg/m3
     const tau = 1 - T / Tc;
-    const b1 = 1.99274064, b2 = 1.09965342, b3 = -0.5108464, b4 = -1.75493479, b5 = -45.5170352, b6 = -6.7469445e5;
-    
-    const term = 1 + b1 * Math.pow(tau, 1/3) + b2 * Math.pow(tau, 2/3) + 
-                 b3 * Math.pow(tau, 5/3) + b4 * Math.pow(tau, 16/3) + 
-                 b5 * Math.pow(tau, 43/3) + b6 * Math.pow(tau, 110/3);
-    return rhoc * term; 
+
+    const b1 = 1.99274064;
+    const b2 = 1.09965342;
+    const b3 = -0.5108464;
+    const b4 = -1.75493479;
+    const b5 = -45.5170352;
+    const b6 = -6.7469445e5;
+
+    const term =
+        1 +
+        b1 * Math.pow(tau, 1 / 3) +
+        b2 * Math.pow(tau, 2 / 3) +
+        b3 * Math.pow(tau, 5 / 3) +
+        b4 * Math.pow(tau, 16 / 3) +
+        b5 * Math.pow(tau, 43 / 3) +
+        b6 * Math.pow(tau, 110 / 3);
+
+    return rhoc * term; // kg/m3
 }
 
 function getCpL(T) {
     const A = 276370, B = -2090.1, C = 8.125, D = -0.014116, E = 9.3701e-6;
-    let cp = A + B*T + C*T*T + D*T*T*T + E*T*T*T*T;
-    return cp / 18.01528 / 1000; 
+    const cp = A + B*T + C*T*T + D*T*T*T + E*T*T*T*T;
+    return cp / 18.01528 / 1000; // kJ/kg·K
 }
 
 function getHL(T) {
     const A = 276370, B = -2090.1, C = 8.125, D = -0.014116, E = 9.3701e-6;
     const intCp = (t) => A*t + (B/2)*t*t + (C/3)*Math.pow(t,3) + (D/4)*Math.pow(t,4) + (E/5)*Math.pow(t,5);
-    return (intCp(T) - intCp(273.16)) / 18.01528 / 1000; 
+    return (intCp(T) - intCp(273.16)) / 18.01528 / 1000; // kJ/kg
 }
 
 function getSL(T) {
     const A = 276370, B = -2090.1, C = 8.125, D = -0.014116, E = 9.3701e-6;
     const intCpT = (t) => A*Math.log(t) + B*t + (C/2)*t*t + (D/3)*Math.pow(t,3) + (E/4)*Math.pow(t,4);
-    return (intCpT(T) - intCpT(273.16)) / 18.01528 / 1000;
+    return (intCpT(T) - intCpT(273.16)) / 18.01528 / 1000; // kJ/kg·K
 }
 
 function getViscL(T) {
     const A = -52.843, B = 3703.6, C = 5.866, E = 10;
     const ln_mu = A + B/T + C*Math.log(T) - 5.879e-29*Math.pow(T, E);
-    return Math.exp(ln_mu); 
+    return Math.exp(ln_mu); // Pa·s
 }
 
 function getKCondL(T) {
-    return -0.432 + 0.0057255*T - 8.078e-6*T*T + 1.861e-9*T*T*T;
+    return -0.432 + 0.0057255*T - 8.078e-6*T*T + 1.861e-9*T*T*T; // W/m·K
 }
 
 function getSurfTension(T) {
     const Tr = T / 647.096;
     if (Tr >= 1) return 0;
-    return 0.1328 * Math.pow(1 - Tr, 1.411 - 0.73976*Tr + 0.3541*Tr*Tr); 
+    return 0.1328 * Math.pow(1 - Tr, 1.411 - 0.73976*Tr + 0.3541*Tr*Tr); // N/m
 }
 
 function getCpV_ig(T) {
     const A = 33363, B = 26790, C = 2610.5, D = 8896, E = 1169;
-    const term1 = C/T / Math.sinh(C/T);
-    const term2 = E/T / Math.cosh(E/T);
-    return (A + B*term1*term1 + D*term2*term2) / 18.01528 / 1000;
+    const term1 = (C / T) / Math.sinh(C / T);
+    const term2 = (E / T) / Math.cosh(E / T);
+    return (A + B*term1*term1 + D*term2*term2) / 18.01528 / 1000; // kJ/kg·K
 }
 
-function getRhoV(T, P) { 
-    const Tc = 647.096, Pc = 22.064, R = 8.31446;
+function getRhoV(T, P) {
+    // T in K, P in MPa
+    const Tc = 647.096;
+    const Pc = 22.064;
+    const R = 8.31446;
+
     const a = 0.42748 * Math.pow(R, 2) * Math.pow(Tc, 2.5) / (Pc * 1e6);
     const b = 0.08664 * R * Tc / (Pc * 1e6);
     const P_Pa = P * 1e6;
-    
+
     const A = a * P_Pa / (Math.pow(R, 2) * Math.pow(T, 2.5));
     const B = b * P_Pa / (R * T);
-    
+
     let Z = 1.0;
-    rkFallback = false;
-    for(let i=0; i<20; i++) {
-        let f = Z*Z*Z - Z*Z + (A - B - B*B)*Z - A*B;
-        let df = 3*Z*Z - 2*Z + (A - B - B*B);
-        let dZ = f / df;
+    let fallback = false;
+
+    for (let i = 0; i < 20; i++) {
+        const f = Z*Z*Z - Z*Z + (A - B - B*B)*Z - A*B;
+        const df = 3*Z*Z - 2*Z + (A - B - B*B);
+
+        if (Math.abs(df) < 1e-12) {
+            fallback = true;
+            Z = 1.0;
+            break;
+        }
+
+        const dZ = f / df;
         Z -= dZ;
-        if(Math.abs(dZ) < 1e-6) break;
+
+        if (!Number.isFinite(Z)) {
+            fallback = true;
+            Z = 1.0;
+            break;
+        }
+
+        if (Math.abs(dZ) < 1e-6) break;
     }
-    if (Z < 0.1 || !isFinite(Z)) {
+
+    if (Z < 0.1 || !Number.isFinite(Z)) {
         Z = 1.0;
-        rkFallback = true;
+        fallback = true;
     }
-    return (P_Pa * 0.018015) / (Z * R * T); 
+
+    return {
+        rho: (P_Pa * 0.01801528) / (Z * R * T), // kg/m3
+        fallback
+    };
 }
 
+// -------------------- Main Calculation Logic --------------------
+
 function calculateSteam() {
-    let P_input = document.getElementById('st_p').value;
-    let T_input = document.getElementById('st_t').value;
-    
-    if (P_input === "" && T_input === "") { alert("Please enter at least Pressure or Temperature."); return; }
-    
-    let isP = P_input !== "";
-    let isT = T_input !== "";
-    let P = parseFloat(P_input), T = parseFloat(T_input);
+    const pEl = document.getElementById('st_p');
+    const tEl = document.getElementById('st_t');
+    const resultEl = document.getElementById('steam-result');
+    const warningEl = document.getElementById('st-rk-warning');
+
+    const P_input = pEl.value;
+    const T_input = tEl.value;
+
+    if (P_input === "" && T_input === "") {
+        alert("Please enter at least Pressure or Temperature.");
+        return;
+    }
+
+    const isP = P_input !== "";
+    const isT = T_input !== "";
+
+    let P = parseFloat(P_input); // bar abs
+    let T = parseFloat(T_input); // °C
     let P_MPa, T_K, mode;
-    
+    let rkFallbackUsed = false;
+
+    // Input handling and state classification
     if (isP && !isT) {
-        if (P < 0.01 || P > 220) { alert("Sat Mode: Pressure must be between 0.01 and 220 bar."); return; }
+        if (P < 0.01 || P > 220) {
+            alert("Sat Mode: Pressure must be between 0.01 and 220 bar.");
+            return;
+        }
+
         P_MPa = P / 10;
         T_K = getTsat(P_MPa);
-        if (!isFinite(T_K)) { alert("Failed to calculate saturation temperature."); return; }
+
+        if (!Number.isFinite(T_K)) {
+            alert("Failed to calculate saturation temperature.");
+            return;
+        }
+
         T = T_K - 273.15;
         mode = "sat";
     } else if (!isP && isT) {
-        if (T < 0.01 || T > 373.9) { alert("Sat Mode: Temperature must be between 0.01 and 373.9 °C."); return; }
+        if (T < 0.01 || T > 373.9) {
+            alert("Sat Mode: Temperature must be between 0.01 and 373.9 °C.");
+            return;
+        }
+
         T_K = T + 273.15;
         P_MPa = getPsat(T_K);
-        if (!isFinite(P_MPa)) { alert("Failed to calculate saturation pressure."); return; }
+
+        if (!Number.isFinite(P_MPa)) {
+            alert("Failed to calculate saturation pressure.");
+            return;
+        }
+
         P = P_MPa * 10;
         mode = "sat";
     } else {
-        if (P < 0.01 || P > 200 || T < 0 || T > 500) { alert("P-T Mode: Valid range is 0.01-200 bar, 0-500 °C."); return; }
+        if (P < 0.01 || P > 200 || T < 0 || T > 500) {
+            alert("P-T Mode: Valid range is 0.01-200 bar, 0-500 °C.");
+            return;
+        }
+
         T_K = T + 273.15;
         P_MPa = P / 10;
-        let Psat = getPsat(T_K);
-        let tol = Math.max(0.0005, (isNaN(Psat) ? 0 : Psat * 0.01)); 
-        
-        if (isNaN(Psat) || P_MPa < Psat - tol) mode = "super";
+
+        const Psat = getPsat(T_K);
+        const tol = Math.max(0.0005, Number.isFinite(Psat) ? Psat * 0.01 : 0);
+
+        if (!Number.isFinite(Psat) || P_MPa < Psat - tol) mode = "super";
         else if (P_MPa > Psat + tol) mode = "sub";
-        else mode = "sat"; 
+        else mode = "sat";
     }
 
-    const H_vap = getHvap(T_K);
-    const H_L = getHL(T_K);
-    const S_L = getSL(T_K);
-    const Cp_L = getCpL(T_K); 
-    const Rho_L = getRhoL(T_K);
-    const Visc_L_cP = getViscL(T_K) * 1000; 
-    const K_L = getKCondL(T_K);
-    const Surf = getSurfTension(T_K) * 1000; 
-    
-    const H_V_sat = H_L + H_vap;
-    const S_V_sat = S_L + (H_vap / T_K);
-    const Cp_V_sat = getCpV_ig(T_K);
-    const Rho_V_sat = getRhoV(T_K, P_MPa);
-    const Visc_V_sat_cP = (1.2e-5 * Math.pow(T_K / 373.15, 1.11)) * 1000; 
-    const K_V_sat = 0.024 * Math.pow(T_K / 373.15, 1.2);
-    
-    let thead = '', tbody = '';
-    
+    let thead = "";
+    let tbody = "";
+
     if (mode === "sat") {
+        const H_vap = getHvap(T_K);
+        const H_L = getHL(T_K);
+        const S_L = getSL(T_K);
+        const Cp_L = getCpL(T_K);
+        const Rho_L = getRhoL(T_K);
+        const Visc_L_cP = getViscL(T_K) * 1000;
+        const K_L = getKCondL(T_K);
+        const Surf = getSurfTension(T_K) * 1000; // mN/m = dyne/cm
+
+        const H_V_sat = H_L + H_vap;
+        const S_V_sat = S_L + (H_vap / T_K);
+        const Cp_V_sat = getCpV_ig(T_K);
+
+        const rhoV = getRhoV(T_K, P_MPa);
+        const Rho_V_sat = rhoV.rho;
+        rkFallbackUsed = rhoV.fallback;
+
+        const Visc_V_sat_cP = (1.2e-5 * Math.pow(T_K / 373.15, 1.11)) * 1000;
+        const K_V_sat = 0.024 * Math.pow(T_K / 373.15, 1.2);
+
         document.getElementById('st-res-state').innerText = "Phase: Saturated (Liquid & Vapor)";
         document.getElementById('st-res-params').innerHTML = `<b>P:</b> ${fmt(P)} bar abs &nbsp;|&nbsp; <b>T:</b> ${fmt(T, 2)} °C`;
-        
-        // 💡 FIXED: Injected robust inline CSS for strict column formatting
+
         thead = `
             <tr>
                 <th style="padding:12px; border-bottom:2px solid #dee2e6; width:25%; text-align:center;">Property</th>
@@ -236,6 +343,7 @@ function calculateSteam() {
                 <th style="padding:12px; border-bottom:2px solid #dee2e6; width:25%; text-align:center; color:#e67e22;">Steam (Vapor)</th>
             </tr>
         `;
+
         tbody = `
             <tr style="border-bottom:1px solid #eee;">
                 <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Enthalpy (kJ/kg)</td>
@@ -246,7 +354,7 @@ function calculateSteam() {
             <tr style="border-bottom:1px solid #eee;">
                 <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Entropy (kJ/kg·K)</td>
                 <td style="padding:10px; text-align:center;">${fmt(S_L, 4)}</td>
-                <td style="padding:10px; text-align:center; color:#8e44ad;">${fmt(H_vap/T_K, 4)}</td>
+                <td style="padding:10px; text-align:center; color:#8e44ad;">${fmt(H_vap / T_K, 4)}</td>
                 <td style="padding:10px; text-align:center;">${fmt(S_V_sat, 4)}</td>
             </tr>
             <tr style="border-bottom:1px solid #eee;">
@@ -256,7 +364,7 @@ function calculateSteam() {
                 <td style="padding:10px; text-align:center;">${fmt(Cp_V_sat)}</td>
             </tr>
             <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Therm. Cond (W/m·K)</td>
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Therm. Cond. (W/m·K)</td>
                 <td style="padding:10px; text-align:center;">${fmt(K_L, 4)}</td>
                 <td style="padding:10px; text-align:center;">-</td>
                 <td style="padding:10px; text-align:center;">${fmt(K_V_sat, 4)}</td>
@@ -265,7 +373,7 @@ function calculateSteam() {
                 <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Density (kg/m³)</td>
                 <td style="padding:10px; text-align:center;">${fmt(Rho_L, 1)}</td>
                 <td style="padding:10px; text-align:center;">-</td>
-                <td style="padding:10px; text-align:center;">${fmt(Rho_V_sat)}</td>
+                <td style="padding:10px; text-align:center;">${fmt(Rho_V_sat, 4)}</td>
             </tr>
             <tr style="border-bottom:1px solid #eee;">
                 <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Viscosity (cP)</td>
@@ -274,44 +382,97 @@ function calculateSteam() {
                 <td style="padding:10px; text-align:center;">${fmt(Visc_V_sat_cP, 4)}</td>
             </tr>
             <tr>
-                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Surf. Tension (Dyne/cm)</td>
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Surf. Tension (mN/m = dyne/cm)</td>
                 <td style="padding:10px; text-align:center;">${fmt(Surf, 2)}</td>
                 <td style="padding:10px; text-align:center;">-</td>
                 <td style="padding:10px; text-align:center;">-</td>
             </tr>
         `;
-    } else {
-        let H_val, S_val, Cp_val, Rho_val, Visc_val, K_val, Surf_val;
+    } else if (mode === "sub") {
+        const H_L = getHL(T_K);
+        const S_L = getSL(T_K);
+        const Cp_L = getCpL(T_K);
+        const Rho_L = getRhoL(T_K);
+        const Visc_L_cP = getViscL(T_K) * 1000;
+        const K_L = getKCondL(T_K);
+        const Surf = getSurfTension(T_K) * 1000;
+        const Psat_here = getPsat(T_K);
 
-        if (mode === "sub") {
-            document.getElementById('st-res-state').innerText = "Phase: Subcooled Liquid";
-            H_val = H_L + (1/Rho_L) * (P_MPa - getPsat(T_K))*1000; 
-            S_val = S_L; Cp_val = Cp_L; Rho_val = Rho_L; Visc_val = Visc_L_cP; K_val = K_L; Surf_val = Surf;
-        } else {
-            document.getElementById('st-res-state').innerText = "Phase: Superheated Steam";
-            let Tsat_ref = getTsat(P_MPa);
-            if(isNaN(Tsat_ref)) Tsat_ref = 373.15; 
-            
-            let H_satV_ref = getHL(Tsat_ref) + getHvap(Tsat_ref);
-            let S_satV_ref = getSL(Tsat_ref) + getHvap(Tsat_ref)/Tsat_ref;
-            let Cp_avg = (getCpV_ig(T_K) + getCpV_ig(Tsat_ref)) / 2;
-            
-            H_val = H_satV_ref + Cp_avg * (T_K - Tsat_ref); 
-            S_val = S_satV_ref + Cp_avg * Math.log(T_K / Tsat_ref); 
-            
-            Cp_val = getCpV_ig(T_K);
-            Rho_val = getRhoV(T_K, P_MPa);
-            Visc_val = (1.2e-5 * Math.pow(T_K / 373.15, 1.11)) * 1000;
-            K_val = 0.024 * Math.pow(T_K / 373.15, 1.2);
-            Surf_val = NaN; 
-        }
-        
+        const H_val = (Number.isFinite(Rho_L) && Number.isFinite(Psat_here))
+            ? H_L + (1 / Rho_L) * (P_MPa - Psat_here) * 1000
+            : NaN;
+
+        document.getElementById('st-res-state').innerText = "Phase: Subcooled Liquid";
         document.getElementById('st-res-params').innerHTML = `<b>P:</b> ${fmt(P)} bar abs &nbsp;|&nbsp; <b>T:</b> ${fmt(T, 2)} °C`;
-        
-        thead = `<tr>
-            <th style="padding:12px; border-bottom:2px solid #dee2e6; width:50%; text-align:center;">Property</th>
-            <th style="padding:12px; border-bottom:2px solid #dee2e6; width:50%; text-align:center; color:#2c3e50;">Estimated Value</th>
-        </tr>`;
+
+        thead = `
+            <tr>
+                <th style="padding:12px; border-bottom:2px solid #dee2e6; width:50%; text-align:center;">Property</th>
+                <th style="padding:12px; border-bottom:2px solid #dee2e6; width:50%; text-align:center; color:#2c3e50;">Estimated Value</th>
+            </tr>
+        `;
+
+        tbody = `
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Enthalpy (kJ/kg)</td>
+                <td style="padding:10px; text-align:center;">${fmt(H_val, 1)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Entropy (kJ/kg·K)</td>
+                <td style="padding:10px; text-align:center;">${fmt(S_L, 4)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Heat Cap. (kJ/kg·K)</td>
+                <td style="padding:10px; text-align:center;">${fmt(Cp_L)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Therm. Cond. (W/m·K)</td>
+                <td style="padding:10px; text-align:center;">${fmt(K_L, 4)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Density (kg/m³)</td>
+                <td style="padding:10px; text-align:center;">${fmt(Rho_L, 1)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Viscosity (cP)</td>
+                <td style="padding:10px; text-align:center;">${fmt(Visc_L_cP, 3)}</td>
+            </tr>
+            <tr>
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Surf. Tension (mN/m = dyne/cm)</td>
+                <td style="padding:10px; text-align:center;">${fmt(Surf, 2)}</td>
+            </tr>
+        `;
+    } else {
+        const Tsat_ref = getTsat(P_MPa);
+        if (!Number.isFinite(Tsat_ref)) {
+            alert("Failed to estimate saturation reference state for superheated calculation.");
+            return;
+        }
+
+        const H_satV_ref = getHL(Tsat_ref) + getHvap(Tsat_ref);
+        const S_satV_ref = getSL(Tsat_ref) + getHvap(Tsat_ref) / Tsat_ref;
+        const Cp_avg = (getCpV_ig(T_K) + getCpV_ig(Tsat_ref)) / 2;
+
+        const rhoV = getRhoV(T_K, P_MPa);
+        rkFallbackUsed = rhoV.fallback;
+
+        const H_val = H_satV_ref + Cp_avg * (T_K - Tsat_ref);
+        const S_val = S_satV_ref + Cp_avg * Math.log(T_K / Tsat_ref);
+        const Cp_val = getCpV_ig(T_K);
+        const Rho_val = rhoV.rho;
+        const Visc_val = (1.2e-5 * Math.pow(T_K / 373.15, 1.11)) * 1000;
+        const K_val = 0.024 * Math.pow(T_K / 373.15, 1.2);
+
+        document.getElementById('st-res-state').innerText = "Phase: Superheated Steam";
+        document.getElementById('st-res-params').innerHTML = `<b>P:</b> ${fmt(P)} bar abs &nbsp;|&nbsp; <b>T:</b> ${fmt(T, 2)} °C`;
+
+        thead = `
+            <tr>
+                <th style="padding:12px; border-bottom:2px solid #dee2e6; width:50%; text-align:center;">Property</th>
+                <th style="padding:12px; border-bottom:2px solid #dee2e6; width:50%; text-align:center; color:#2c3e50;">Estimated Value</th>
+            </tr>
+        `;
+
         tbody = `
             <tr style="border-bottom:1px solid #eee;">
                 <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Enthalpy (kJ/kg)</td>
@@ -326,27 +487,27 @@ function calculateSteam() {
                 <td style="padding:10px; text-align:center;">${fmt(Cp_val)}</td>
             </tr>
             <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Therm. Cond (W/m·K)</td>
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Therm. Cond. (W/m·K)</td>
                 <td style="padding:10px; text-align:center;">${fmt(K_val, 4)}</td>
             </tr>
             <tr style="border-bottom:1px solid #eee;">
                 <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Density (kg/m³)</td>
-                <td style="padding:10px; text-align:center;">${fmt(Rho_val)}</td>
+                <td style="padding:10px; text-align:center;">${fmt(Rho_val, 4)}</td>
             </tr>
             <tr style="border-bottom:1px solid #eee;">
                 <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Viscosity (cP)</td>
                 <td style="padding:10px; text-align:center;">${fmt(Visc_val, 4)}</td>
             </tr>
             <tr>
-                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Surf. Tension (Dyne/cm)</td>
-                <td style="padding:10px; text-align:center;">${fmt(Surf_val, 2)}</td>
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Surf. Tension (mN/m = dyne/cm)</td>
+                <td style="padding:10px; text-align:center;">-</td>
             </tr>
         `;
     }
-    
+
     document.getElementById('st-table-head').innerHTML = thead;
     document.getElementById('st-table-body').innerHTML = tbody;
-    document.getElementById('st-rk-warning').style.display = rkFallback ? 'block' : 'none';
-    document.getElementById('steam-result').style.display = 'block';
+    warningEl.style.display = rkFallbackUsed ? 'block' : 'none';
+    resultEl.style.display = 'block';
 }
 </script>
