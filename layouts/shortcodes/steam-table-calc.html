@@ -1,42 +1,45 @@
-<div id="steam-calc-container" style="background: #fdfdfd; padding: 25px; border-radius: 12px; border: 1px solid #eaeaea; margin: 25px 0; color: #2c3e50; font-family: 'Segoe UI', sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-    <h3 style="margin-top:0; border-bottom: 2px solid #3498db; padding-bottom: 10px; color: #2980b9;">💧 Steam Properties Estimator</h3>
-    <p style="font-size:0.85em; color:#7f8c8d; line-height: 1.5;">
-        * <b>Saturated Mode:</b> Enter <i>only</i> P or T. (Input limit: 0.01–220 bar / 0.01–373.9 °C)<br>
-        * <b>P-T Mode (Sub/Super):</b> Enter <i>both</i> P and T. (Input limit: 0.01–200 bar / 0–500 °C)
-    </p>
+<div id="steam-calc-container" style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #dee2e6; margin: 25px 0; color: #333; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+    <h3 style="margin-top:0; border-bottom: 2px solid #3498db; padding-bottom: 12px; color: #2c3e50;">💧 Steam Properties Estimator</h3>
     
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-        <div>
-            <label style="font-weight:bold; font-size: 0.85em;">Pressure (P, bar abs)</label>
-            <input type="number" id="st_p" placeholder="Leave blank for sat. at T" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 0.85em; color: #555; border-left: 4px solid #3498db;">
+        • <b>Saturated Mode:</b> Enter <i>only</i> P or T. (Range: 0.01–220 bar / 0.01–373.9 °C)<br>
+        • <b>P-T Mode (Sub/Super):</b> Enter <i>both</i> P and T. (Range: 0.01–200 bar / 0–500 °C)
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+        <div style="display: flex; flex-direction: column;">
+            <label style="font-weight:bold; font-size: 0.85em; margin-bottom: 6px; color: #444;">Pressure (P, bar abs)</label>
+            <input type="number" id="st_p" placeholder="Leave blank for sat." style="padding: 10px; border: 1px solid #ccc; border-radius: 6px; outline: none;">
         </div>
-        <div>
-            <label style="font-weight:bold; font-size: 0.85em;">Temperature (T, °C)</label>
-            <input type="number" id="st_t" placeholder="Leave blank for sat. at P" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+        <div style="display: flex; flex-direction: column;">
+            <label style="font-weight:bold; font-size: 0.85em; margin-bottom: 6px; color: #444;">Temperature (T, °C)</label>
+            <input type="number" id="st_t" placeholder="Leave blank for sat." style="padding: 10px; border: 1px solid #ccc; border-radius: 6px; outline: none;">
         </div>
     </div>
 
-    <button id="btn-calc-steam" style="background: #3498db; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; font-size: 1em; transition: 0.3s;">Estimate Properties</button>
+    <button id="btn-calc-steam" style="background: #3498db; color: white; border: none; padding: 14px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; font-size: 1.05em; transition: 0.2s;">Estimate Properties</button>
 
-    <div id="steam-result" style="margin-top: 20px; display:none; background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 8px;">
-        <div id="st-res-state" style="font-weight:bold; font-size:1.1em; color:#e74c3c; margin-bottom:5px; text-align:center;"></div>
-        <div id="st-res-params" style="font-size: 0.9em; color: #555; text-align:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #ccc;"></div>
+    <div id="steam-result" style="margin-top: 25px; display:none;">
+        <div style="text-align: center; margin-bottom: 20px; padding: 12px; background: #fffcf5; border: 1px solid #fae5b6; border-radius: 8px;">
+            <div id="st-res-state" style="font-weight:bold; font-size:1.1em; color:#d35400; margin-bottom:5px;"></div>
+            <div id="st-res-params" style="font-size: 0.95em; color: #2c3e50;"></div>
+        </div>
         
-        <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 0.9em;">
-            <thead id="st-table-head" style="background: #ecf0f1; border-bottom: 2px solid #bdc3c7;"></thead>
-            <tbody id="st-table-body"></tbody>
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #dee2e6; border-radius: 6px; overflow: hidden; font-size: 0.9em;">
+            <thead id="st-table-head" style="background: #f1f3f5; color: #495057;"></thead>
+            <tbody id="st-table-body" style="background: white;"></tbody>
         </table>
         
-        <div id="st-rk-warning" style="display:none; color: #c0392b; background: #fadbd8; padding: 8px; margin-top: 10px; font-size: 0.8em; border-radius: 4px; text-align: center; font-weight: bold;">
-            ⚠️ Vapor density reverted to ideal-gas fallback at this condition.
+        <div id="st-rk-warning" style="display:none; color: #721c24; background: #f8d7da; padding: 10px; margin-top: 15px; font-size: 0.85em; border-radius: 6px; text-align: center;">
+            ⚠️ Vapor density calculation reverted to ideal-gas fallback.
         </div>
 
-        <div style="background: #fdfae8; border-left: 4px solid #f1c40f; padding: 12px; margin-top: 20px; font-size: 0.8em; color: #7f8c8d; line-height: 1.4;">
+        <div style="background: #fdfae8; border-left: 4px solid #f1c40f; padding: 12px; margin-top: 20px; font-size: 0.8em; color: #7f8c8d; line-height: 1.5;">
             <b>⚠️ Engineering Disclaimer</b><br>
-            * Based on browser-level empirical estimations (Wagner Eq, DIPPR curves).<br>
-            * Vapor density utilizes RK EOS compressibility factor ($Z$); Enthalpy/Entropy rely on simplified $C_p$ integrals.<br>
+            * Based on browser-level empirical estimations (Wagner Equations, DIPPR).<br>
+            * Vapor density utilizes RK EOS compressibility factor ($Z$).<br>
             * <b>Reference State:</b> Enthalpy/Entropy referenced to liquid water at 273.16 K.<br>
-            * <i>Intended for conceptual design and preliminary sizing only. Not equivalent to certified IAPWS-IF97 data.</i>
+            * <i>Intended for preliminary sizing only. Not equivalent to certified IAPWS-IF97 data.</i>
         </div>
     </div>
 </div>
@@ -55,7 +58,6 @@ function fmt(val, digits = 3) {
 
 // --- Core Thermodynamic Functions ---
 
-// 💡 Fixed: Corrected IAPWS-95 Wagner Exponents and Coefficients!
 function getPsat(T) {
     if (T < 273.15 || T > 647.096) return NaN;
     const Tc = 647.096, Pc = 22.064;
@@ -86,14 +88,18 @@ function getHvap(T) {
     return H_j_kmol / 18.01528 / 1000; 
 }
 
+// 💡 FIXED: Replaced with the highly accurate Wagner Liquid Density Correlation
 function getRhoL(T) {
+    if (T < 273.15 || T > 647.096) return NaN;
     const Tc = 647.096;
-    if (T < 273.15 || T > Tc) return NaN;
-    const A = 0.14395, B = 0.0112, D = 0.05107;
-    const x = Math.max(0, 1 - T / Tc);
-    const term = 1 + Math.pow(x, D);
-    const rho_kmol = A / Math.pow(B, term);
-    return rho_kmol * 18.01528; 
+    const rhoc = 322.0; 
+    const tau = 1 - T / Tc;
+    const b1 = 1.99274064, b2 = 1.09965342, b3 = -0.5108464, b4 = -1.75493479, b5 = -45.5170352, b6 = -6.7469445e5;
+    
+    const term = 1 + b1 * Math.pow(tau, 1/3) + b2 * Math.pow(tau, 2/3) + 
+                 b3 * Math.pow(tau, 5/3) + b4 * Math.pow(tau, 16/3) + 
+                 b5 * Math.pow(tau, 43/3) + b6 * Math.pow(tau, 110/3);
+    return rhoc * term; 
 }
 
 function getCpL(T) {
@@ -177,14 +183,14 @@ function calculateSteam() {
         if (P < 0.01 || P > 220) { alert("Sat Mode: Pressure must be between 0.01 and 220 bar."); return; }
         P_MPa = P / 10;
         T_K = getTsat(P_MPa);
-        if (!isFinite(T_K)) { alert("Failed to calculate saturation temperature. Out of reliable range."); return; }
+        if (!isFinite(T_K)) { alert("Failed to calculate saturation temperature."); return; }
         T = T_K - 273.15;
         mode = "sat";
     } else if (!isP && isT) {
         if (T < 0.01 || T > 373.9) { alert("Sat Mode: Temperature must be between 0.01 and 373.9 °C."); return; }
         T_K = T + 273.15;
         P_MPa = getPsat(T_K);
-        if (!isFinite(P_MPa)) { alert("Failed to calculate saturation pressure. Out of reliable range."); return; }
+        if (!isFinite(P_MPa)) { alert("Failed to calculate saturation pressure."); return; }
         P = P_MPa * 10;
         mode = "sat";
     } else {
@@ -221,22 +227,58 @@ function calculateSteam() {
         document.getElementById('st-res-state').innerText = "Phase: Saturated (Liquid & Vapor)";
         document.getElementById('st-res-params').innerHTML = `<b>P:</b> ${fmt(P)} bar abs &nbsp;|&nbsp; <b>T:</b> ${fmt(T, 2)} °C`;
         
+        // 💡 FIXED: Injected robust inline CSS for strict column formatting
         thead = `
             <tr>
-                <th style="padding:10px; border-bottom:1px solid #ddd;">Property</th>
-                <th style="padding:10px; border-bottom:1px solid #ddd; color:#2980b9;">Water (Liquid)</th>
-                <th style="padding:10px; border-bottom:1px solid #ddd; color:#8e44ad;">Evaporation</th>
-                <th style="padding:10px; border-bottom:1px solid #ddd; color:#e67e22;">Steam (Vapor)</th>
+                <th style="padding:12px; border-bottom:2px solid #dee2e6; width:25%; text-align:center;">Property</th>
+                <th style="padding:12px; border-bottom:2px solid #dee2e6; width:25%; text-align:center; color:#2980b9;">Water (Liquid)</th>
+                <th style="padding:12px; border-bottom:2px solid #dee2e6; width:25%; text-align:center; color:#8e44ad;">Evaporation</th>
+                <th style="padding:12px; border-bottom:2px solid #dee2e6; width:25%; text-align:center; color:#e67e22;">Steam (Vapor)</th>
             </tr>
         `;
         tbody = `
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Enthalpy (kJ/kg)</td><td>${fmt(H_L, 1)}</td><td style="color:#8e44ad;">${fmt(H_vap, 1)}</td><td>${fmt(H_V_sat, 1)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Entropy (kJ/kg·K)</td><td>${fmt(S_L, 4)}</td><td style="color:#8e44ad;">${fmt(H_vap/T_K, 4)}</td><td>${fmt(S_V_sat, 4)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Heat Capacity (kJ/kg·K)</td><td>${fmt(Cp_L)}</td><td>-</td><td>${fmt(Cp_V_sat)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Thermal Cond. (W/m·K)</td><td>${fmt(K_L, 4)}</td><td>-</td><td>${fmt(K_V_sat, 4)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Density (kg/m³)</td><td>${fmt(Rho_L, 1)}</td><td>-</td><td>${fmt(Rho_V_sat)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Viscosity (cP)</td><td>${fmt(Visc_L_cP, 3)}</td><td>-</td><td>${fmt(Visc_V_sat_cP, 4)}</td></tr>
-            <tr><td style="padding:8px; font-weight:bold;">Surface Tension (Dyne/cm)</td><td>${fmt(Surf, 2)}</td><td>-</td><td>-</td></tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Enthalpy (kJ/kg)</td>
+                <td style="padding:10px; text-align:center;">${fmt(H_L, 1)}</td>
+                <td style="padding:10px; text-align:center; color:#8e44ad;">${fmt(H_vap, 1)}</td>
+                <td style="padding:10px; text-align:center;">${fmt(H_V_sat, 1)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Entropy (kJ/kg·K)</td>
+                <td style="padding:10px; text-align:center;">${fmt(S_L, 4)}</td>
+                <td style="padding:10px; text-align:center; color:#8e44ad;">${fmt(H_vap/T_K, 4)}</td>
+                <td style="padding:10px; text-align:center;">${fmt(S_V_sat, 4)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Heat Cap. (kJ/kg·K)</td>
+                <td style="padding:10px; text-align:center;">${fmt(Cp_L)}</td>
+                <td style="padding:10px; text-align:center;">-</td>
+                <td style="padding:10px; text-align:center;">${fmt(Cp_V_sat)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Therm. Cond (W/m·K)</td>
+                <td style="padding:10px; text-align:center;">${fmt(K_L, 4)}</td>
+                <td style="padding:10px; text-align:center;">-</td>
+                <td style="padding:10px; text-align:center;">${fmt(K_V_sat, 4)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Density (kg/m³)</td>
+                <td style="padding:10px; text-align:center;">${fmt(Rho_L, 1)}</td>
+                <td style="padding:10px; text-align:center;">-</td>
+                <td style="padding:10px; text-align:center;">${fmt(Rho_V_sat)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Viscosity (cP)</td>
+                <td style="padding:10px; text-align:center;">${fmt(Visc_L_cP, 3)}</td>
+                <td style="padding:10px; text-align:center;">-</td>
+                <td style="padding:10px; text-align:center;">${fmt(Visc_V_sat_cP, 4)}</td>
+            </tr>
+            <tr>
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Surf. Tension (Dyne/cm)</td>
+                <td style="padding:10px; text-align:center;">${fmt(Surf, 2)}</td>
+                <td style="padding:10px; text-align:center;">-</td>
+                <td style="padding:10px; text-align:center;">-</td>
+            </tr>
         `;
     } else {
         let H_val, S_val, Cp_val, Rho_val, Visc_val, K_val, Surf_val;
@@ -266,15 +308,39 @@ function calculateSteam() {
         
         document.getElementById('st-res-params').innerHTML = `<b>P:</b> ${fmt(P)} bar abs &nbsp;|&nbsp; <b>T:</b> ${fmt(T, 2)} °C`;
         
-        thead = `<tr><th style="padding:10px; border-bottom:1px solid #ddd; width: 50%;">Property</th><th style="padding:10px; border-bottom:1px solid #ddd; color:#2c3e50;">Estimated Value</th></tr>`;
+        thead = `<tr>
+            <th style="padding:12px; border-bottom:2px solid #dee2e6; width:50%; text-align:center;">Property</th>
+            <th style="padding:12px; border-bottom:2px solid #dee2e6; width:50%; text-align:center; color:#2c3e50;">Estimated Value</th>
+        </tr>`;
         tbody = `
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Enthalpy (kJ/kg)</td><td>${fmt(H_val, 1)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Entropy (kJ/kg·K)</td><td>${fmt(S_val, 4)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Heat Capacity (kJ/kg·K)</td><td>${fmt(Cp_val)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Thermal Cond. (W/m·K)</td><td>${fmt(K_val, 4)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Density (kg/m³)</td><td>${fmt(Rho_val)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Viscosity (cP)</td><td>${fmt(Visc_val, 4)}</td></tr>
-            <tr><td style="padding:8px; font-weight:bold;">Surface Tension (Dyne/cm)</td><td>${fmt(Surf_val, 2)}</td></tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Enthalpy (kJ/kg)</td>
+                <td style="padding:10px; text-align:center;">${fmt(H_val, 1)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Entropy (kJ/kg·K)</td>
+                <td style="padding:10px; text-align:center;">${fmt(S_val, 4)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Heat Cap. (kJ/kg·K)</td>
+                <td style="padding:10px; text-align:center;">${fmt(Cp_val)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Therm. Cond (W/m·K)</td>
+                <td style="padding:10px; text-align:center;">${fmt(K_val, 4)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Density (kg/m³)</td>
+                <td style="padding:10px; text-align:center;">${fmt(Rho_val)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Viscosity (cP)</td>
+                <td style="padding:10px; text-align:center;">${fmt(Visc_val, 4)}</td>
+            </tr>
+            <tr>
+                <td style="padding:10px; font-weight:bold; text-align:center; background:#fafafa;">Surf. Tension (Dyne/cm)</td>
+                <td style="padding:10px; text-align:center;">${fmt(Surf_val, 2)}</td>
+            </tr>
         `;
     }
     
