@@ -1,8 +1,8 @@
 <div id="steam-calc-container" style="background: #fdfdfd; padding: 25px; border-radius: 12px; border: 1px solid #eaeaea; margin: 25px 0; color: #2c3e50; font-family: 'Segoe UI', sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-    <h3 style="margin-top:0; border-bottom: 2px solid #3498db; padding-bottom: 10px; color: #2980b9;">💧 Steam Properties Calculator</h3>
+    <h3 style="margin-top:0; border-bottom: 2px solid #3498db; padding-bottom: 10px; color: #2980b9;">💧 Steam Properties Estimator</h3>
     <p style="font-size:0.85em; color:#7f8c8d; line-height: 1.5;">
-        * <b>Saturated State:</b> Enter <i>only</i> Pressure or Temperature.<br>
-        * <b>Subcooled / Superheated:</b> Enter <i>both</i> Pressure and Temperature.
+        * <b>Saturated Mode:</b> Enter <i>only</i> P or T. (Input limit: 0.01–220 bar / 0.01–373.9 °C)<br>
+        * <b>P-T Mode (Sub/Super):</b> Enter <i>both</i> P and T. (Input limit: 0.01–200 bar / 0–500 °C)
     </p>
     
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
@@ -16,29 +16,43 @@
         </div>
     </div>
 
-    <button onclick="calculateSteam()" style="background: #3498db; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; font-size: 1em; transition: 0.3s;">Calculate Properties</button>
+    <button id="btn-calc-steam" style="background: #3498db; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; font-size: 1em; transition: 0.3s;">Estimate Properties</button>
 
     <div id="steam-result" style="margin-top: 20px; display:none; background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 8px;">
         <div id="st-res-state" style="font-weight:bold; font-size:1.1em; color:#e74c3c; margin-bottom:5px; text-align:center;"></div>
         <div id="st-res-params" style="font-size: 0.9em; color: #555; text-align:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #ccc;"></div>
         
         <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 0.9em;">
-            <thead id="st-table-head" style="background: #ecf0f1; border-bottom: 2px solid #bdc3c7;">
-                </thead>
-            <tbody id="st-table-body">
-                </tbody>
+            <thead id="st-table-head" style="background: #ecf0f1; border-bottom: 2px solid #bdc3c7;"></thead>
+            <tbody id="st-table-body"></tbody>
         </table>
         
-        <div style="background: #fff8e1; border-left: 4px solid #f1c40f; padding: 10px; margin-top: 20px; font-size: 0.8em; color: #7f8c8d; line-height: 1.4;">
+        <div id="st-rk-warning" style="display:none; color: #c0392b; background: #fadbd8; padding: 8px; margin-top: 10px; font-size: 0.8em; border-radius: 4px; text-align: center; font-weight: bold;">
+            ⚠️ Vapor density reverted to ideal-gas fallback at this condition.
+        </div>
+
+        <div style="background: #fdfae8; border-left: 4px solid #f1c40f; padding: 12px; margin-top: 20px; font-size: 0.8em; color: #7f8c8d; line-height: 1.4;">
             <b>⚠️ Engineering Disclaimer</b><br>
-            Calculated via in-browser empirical correlations (Wagner Eq, AIChE DIPPR, Redlich-Kwong EOS).<br>
-            <b>Valid Range:</b> 0.01 ~ 200 bar, 0 ~ 500 °C. Accuracy decreases near the critical point.<br>
-            <i>Not an IAPWS-IF97 certified formulation. Use for conceptual design and estimations only.</i>
+            * Based on browser-level empirical estimations (Wagner Eq, DIPPR curves).<br>
+            * Vapor density utilizes RK EOS compressibility factor ($Z$); Enthalpy/Entropy rely on simplified $C_p$ integrals.<br>
+            * <b>Reference State:</b> Enthalpy/Entropy referenced to liquid water at 273.16 K.<br>
+            * <i>Intended for conceptual design and preliminary sizing only. Not equivalent to certified IAPWS-IF97 data.</i>
         </div>
     </div>
 </div>
 
 <script>
+const btnCalcSteam = document.getElementById('btn-calc-steam');
+if (btnCalcSteam) {
+    btnCalcSteam.addEventListener('click', calculateSteam);
+}
+
+let rkFallback = false; // Global flag for RK EOS fallback warning
+
+function fmt(val, digits = 3) {
+    return Number.isFinite(val) ? val.toFixed(digits) : "-";
+}
+
 // --- Core Thermodynamic Functions ---
 function getPsat(T) {
     if (T < 273.15 || T > 647.096) return NaN;
@@ -51,14 +65,15 @@ function getPsat(T) {
 
 function getTsat(P) {
     if (P <= 0.000611 || P > 22.064) return NaN;
-    let T = 373.15; 
-    for (let i = 0; i < 20; i++) {
-        let f = getPsat(T) - P;
-        if (Math.abs(f) < 1e-6) break;
-        let df = (getPsat(T + 0.01) - getPsat(T - 0.01)) / 0.02;
-        T = T - f / df;
+    let T_low = 273.15, T_high = 647.096, T_mid;
+    for (let i = 0; i < 50; i++) {
+        T_mid = (T_low + T_high) / 2;
+        let P_mid = getPsat(T_mid);
+        if (Math.abs(P_mid - P) < 1e-6 || (T_high - T_low) < 1e-6) break;
+        if (P_mid < P) T_low = T_mid;
+        else T_high = T_mid;
     }
-    return T;
+    return T_mid;
 }
 
 function getHvap(T) {
@@ -70,11 +85,13 @@ function getHvap(T) {
 }
 
 function getRhoL(T) {
-    const Tc = T - 273.15;
-    if (Tc <= 100) return 999.8 + 0.068*Tc - 0.0107*Tc*Tc + 8.2e-5*Math.pow(Tc,3) - 2.3e-7*Math.pow(Tc,4);
-    else if (Tc <= 200) return 958.3 - 0.71*(Tc-100) - 0.0025*Math.pow(Tc-100,2);
-    else if (Tc <= 300) return 864.7 - 1.05*(Tc-200) - 0.004*Math.pow(Tc-200,2);
-    else return 712 - 2.5*(Tc-300);
+    const Tc = 647.096;
+    if (T < 273.15 || T > Tc) return NaN;
+    const A = 0.14395, B = 0.0112, D = 0.05107;
+    const x = Math.max(0, 1 - T / Tc);
+    const term = 1 + Math.pow(x, D);
+    const rho_kmol = A / Math.pow(B, term);
+    return rho_kmol * 18.01528; 
 }
 
 function getCpL(T) {
@@ -105,6 +122,7 @@ function getKCondL(T) {
     return -0.432 + 0.0057255*T - 8.078e-6*T*T + 1.861e-9*T*T*T;
 }
 
+// Surface Tension (returns N/m)
 function getSurfTension(T) {
     const Tr = T / 647.096;
     if (Tr >= 1) return 0;
@@ -128,18 +146,21 @@ function getRhoV(T, P) {
     const B = b * P_Pa / (R * T);
     
     let Z = 1.0;
-    for(let i=0; i<15; i++) {
+    rkFallback = false;
+    for(let i=0; i<20; i++) {
         let f = Z*Z*Z - Z*Z + (A - B - B*B)*Z - A*B;
         let df = 3*Z*Z - 2*Z + (A - B - B*B);
         let dZ = f / df;
         Z -= dZ;
         if(Math.abs(dZ) < 1e-6) break;
     }
-    if (Z < 0.1 || isNaN(Z)) Z = 1.0;
+    if (Z < 0.1 || !isFinite(Z)) {
+        Z = 1.0;
+        rkFallback = true;
+    }
     return (P_Pa * 0.018015) / (Z * R * T); 
 }
 
-// --- Main Calculation Logic ---
 function calculateSteam() {
     let P_input = document.getElementById('st_p').value;
     let T_input = document.getElementById('st_t').value;
@@ -152,24 +173,28 @@ function calculateSteam() {
     let P_MPa, T_K, mode;
     
     if (isP && !isT) {
-        if (P <= 0 || P > 220) { alert("Pressure out of bounds (0.01 - 220 bar)."); return; }
+        if (P < 0.01 || P > 220) { alert("Sat Mode: Pressure must be between 0.01 and 220 bar."); return; }
         P_MPa = P / 10;
         T_K = getTsat(P_MPa);
+        if (!isFinite(T_K)) { alert("Failed to calculate saturation temperature. Out of reliable range."); return; }
         T = T_K - 273.15;
         mode = "sat";
     } else if (!isP && isT) {
-        if (T <= 0 || T >= 374) { alert("Temperature out of bounds for sat. (0 - 374 °C)."); return; }
+        if (T < 0.01 || T > 373.9) { alert("Sat Mode: Temperature must be between 0.01 and 373.9 °C."); return; }
         T_K = T + 273.15;
         P_MPa = getPsat(T_K);
+        if (!isFinite(P_MPa)) { alert("Failed to calculate saturation pressure. Out of reliable range."); return; }
         P = P_MPa * 10;
         mode = "sat";
     } else {
+        if (P < 0.01 || P > 200 || T < 0 || T > 500) { alert("P-T Mode: Valid range is 0.01-200 bar, 0-500 °C."); return; }
         T_K = T + 273.15;
         P_MPa = P / 10;
         let Psat = getPsat(T_K);
+        let tol = Math.max(0.0005, (isNaN(Psat) ? 0 : Psat * 0.01)); 
         
-        if (isNaN(Psat) || P_MPa < Psat - 0.005) mode = "super";
-        else if (P_MPa > Psat + 0.005) mode = "sub";
+        if (isNaN(Psat) || P_MPa < Psat - tol) mode = "super";
+        else if (P_MPa > Psat + tol) mode = "sub";
         else mode = "sat"; 
     }
 
@@ -178,7 +203,7 @@ function calculateSteam() {
     const S_L = getSL(T_K);
     const Cp_L = getCpL(T_K); 
     const Rho_L = getRhoL(T_K);
-    const Visc_L = getViscL(T_K) * 1e6; 
+    const Visc_L_cP = getViscL(T_K) * 1000; 
     const K_L = getKCondL(T_K);
     const Surf = getSurfTension(T_K) * 1000; 
     
@@ -186,14 +211,14 @@ function calculateSteam() {
     const S_V_sat = S_L + (H_vap / T_K);
     const Cp_V_sat = getCpV_ig(T_K);
     const Rho_V_sat = getRhoV(T_K, P_MPa);
-    const Visc_V_sat = 1.2e-5 * Math.pow(T_K / 373.15, 1.11) * 1e6;
+    const Visc_V_sat_cP = (1.2e-5 * Math.pow(T_K / 373.15, 1.11)) * 1000; 
     const K_V_sat = 0.024 * Math.pow(T_K / 373.15, 1.2);
     
     let thead = '', tbody = '';
     
     if (mode === "sat") {
         document.getElementById('st-res-state').innerText = "Phase: Saturated (Liquid & Vapor)";
-        document.getElementById('st-res-params').innerHTML = `<b>P:</b> ${P.toFixed(3)} bar abs &nbsp;|&nbsp; <b>T:</b> ${T.toFixed(2)} °C`;
+        document.getElementById('st-res-params').innerHTML = `<b>P:</b> ${fmt(P)} bar abs &nbsp;|&nbsp; <b>T:</b> ${fmt(T, 2)} °C`;
         
         thead = `
             <tr>
@@ -204,20 +229,21 @@ function calculateSteam() {
             </tr>
         `;
         tbody = `
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Enthalpy (kJ/kg)</td><td>${H_L.toFixed(1)}</td><td style="color:#8e44ad;">${H_vap.toFixed(1)}</td><td>${H_V_sat.toFixed(1)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Entropy (kJ/kg·K)</td><td>${S_L.toFixed(4)}</td><td style="color:#8e44ad;">${(H_vap/T_K).toFixed(4)}</td><td>${S_V_sat.toFixed(4)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Heat Capacity (kJ/kg·K)</td><td>${Cp_L.toFixed(3)}</td><td>-</td><td>${Cp_V_sat.toFixed(3)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Thermal Cond. (W/m·K)</td><td>${K_L.toFixed(4)}</td><td>-</td><td>${K_V_sat.toFixed(4)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Density (kg/m³)</td><td>${Rho_L.toFixed(1)}</td><td>-</td><td>${Rho_V_sat.toFixed(3)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Viscosity (μPa·s)</td><td>${Visc_L.toFixed(1)}</td><td>-</td><td>${Visc_V_sat.toFixed(1)}</td></tr>
-            <tr><td style="padding:8px; font-weight:bold;">Surface Tension (mN/m)</td><td>${Surf.toFixed(2)}</td><td>-</td><td>-</td></tr>
+            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Enthalpy (kJ/kg)</td><td>${fmt(H_L, 1)}</td><td style="color:#8e44ad;">${fmt(H_vap, 1)}</td><td>${fmt(H_V_sat, 1)}</td></tr>
+            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Entropy (kJ/kg·K)</td><td>${fmt(S_L, 4)}</td><td style="color:#8e44ad;">${fmt(H_vap/T_K, 4)}</td><td>${fmt(S_V_sat, 4)}</td></tr>
+            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Heat Capacity (kJ/kg·K)</td><td>${fmt(Cp_L)}</td><td>-</td><td>${fmt(Cp_V_sat)}</td></tr>
+            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Thermal Cond. (W/m·K)</td><td>${fmt(K_L, 4)}</td><td>-</td><td>${fmt(K_V_sat, 4)}</td></tr>
+            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Density (kg/m³)</td><td>${fmt(Rho_L, 1)}</td><td>-</td><td>${fmt(Rho_V_sat)}</td></tr>
+            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Viscosity (cP)</td><td>${fmt(Visc_L_cP, 3)}</td><td>-</td><td>${fmt(Visc_V_sat_cP, 4)}</td></tr>
+            <tr><td style="padding:8px; font-weight:bold;">Surface Tension (Dyne/cm)</td><td>${fmt(Surf, 2)}</td><td>-</td><td>-</td></tr>
         `;
     } else {
         let H_val, S_val, Cp_val, Rho_val, Visc_val, K_val, Surf_val;
+
         if (mode === "sub") {
             document.getElementById('st-res-state').innerText = "Phase: Subcooled Liquid";
-            H_val = H_L + (1/Rho_L) * (P_MPa - getPsat(T_K))*1000; 
-            S_val = S_L; Cp_val = Cp_L; Rho_val = Rho_L; Visc_val = Visc_L; K_val = K_L; Surf_val = Surf;
+            H_val = H_L + (1/Rho_L) * (P_MPa - getPsat(T_K))*1000; // rough approximation
+            S_val = S_L; Cp_val = Cp_L; Rho_val = Rho_L; Visc_val = Visc_L_cP; K_val = K_L; Surf_val = Surf;
         } else {
             document.getElementById('st-res-state').innerText = "Phase: Superheated Steam";
             let Tsat_ref = getTsat(P_MPa);
@@ -227,33 +253,33 @@ function calculateSteam() {
             let S_satV_ref = getSL(Tsat_ref) + getHvap(Tsat_ref)/Tsat_ref;
             let Cp_avg = (getCpV_ig(T_K) + getCpV_ig(Tsat_ref)) / 2;
             
-            H_val = H_satV_ref + Cp_avg * (T_K - Tsat_ref);
+            H_val = H_satV_ref + Cp_avg * (T_K - Tsat_ref); 
             S_val = S_satV_ref + Cp_avg * Math.log(T_K / Tsat_ref); 
+            
             Cp_val = getCpV_ig(T_K);
             Rho_val = getRhoV(T_K, P_MPa);
-            Visc_val = 1.2e-5 * Math.pow(T_K / 373.15, 1.11) * 1e6;
+            Visc_val = (1.2e-5 * Math.pow(T_K / 373.15, 1.11)) * 1000;
             K_val = 0.024 * Math.pow(T_K / 373.15, 1.2);
-            Surf_val = "-"; 
+            Surf_val = NaN; 
         }
         
-        document.getElementById('st-res-params').innerHTML = `<b>P:</b> ${P.toFixed(3)} bar abs &nbsp;|&nbsp; <b>T:</b> ${T.toFixed(2)} °C`;
+        document.getElementById('st-res-params').innerHTML = `<b>P:</b> ${fmt(P)} bar abs &nbsp;|&nbsp; <b>T:</b> ${fmt(T, 2)} °C`;
         
-        thead = `
-            <tr><th style="padding:10px; border-bottom:1px solid #ddd; width: 50%;">Property</th><th style="padding:10px; border-bottom:1px solid #ddd; color:#2c3e50;">Calculated Value</th></tr>
-        `;
+        thead = `<tr><th style="padding:10px; border-bottom:1px solid #ddd; width: 50%;">Property</th><th style="padding:10px; border-bottom:1px solid #ddd; color:#2c3e50;">Estimated Value</th></tr>`;
         tbody = `
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Enthalpy (kJ/kg)</td><td>${H_val.toFixed(1)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Entropy (kJ/kg·K)</td><td>${S_val.toFixed(4)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Heat Capacity (kJ/kg·K)</td><td>${Cp_val.toFixed(3)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Thermal Cond. (W/m·K)</td><td>${K_val.toFixed(4)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Density (kg/m³)</td><td>${Rho_val.toFixed(3)}</td></tr>
-            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Viscosity (μPa·s)</td><td>${Visc_val.toFixed(1)}</td></tr>
-            <tr><td style="padding:8px; font-weight:bold;">Surface Tension (mN/m)</td><td>${Surf_val === "-" ? "-" : Surf_val.toFixed(2)}</td></tr>
+            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Enthalpy (kJ/kg)</td><td>${fmt(H_val, 1)}</td></tr>
+            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Entropy (kJ/kg·K)</td><td>${fmt(S_val, 4)}</td></tr>
+            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Heat Capacity (kJ/kg·K)</td><td>${fmt(Cp_val)}</td></tr>
+            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Thermal Cond. (W/m·K)</td><td>${fmt(K_val, 4)}</td></tr>
+            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Density (kg/m³)</td><td>${fmt(Rho_val)}</td></tr>
+            <tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:bold;">Viscosity (cP)</td><td>${fmt(Visc_val, 4)}</td></tr>
+            <tr><td style="padding:8px; font-weight:bold;">Surface Tension (Dyne/cm)</td><td>${fmt(Surf_val, 2)}</td></tr>
         `;
     }
     
     document.getElementById('st-table-head').innerHTML = thead;
     document.getElementById('st-table-body').innerHTML = tbody;
+    document.getElementById('st-rk-warning').style.display = rkFallback ? 'block' : 'none';
     document.getElementById('steam-result').style.display = 'block';
 }
 </script>
