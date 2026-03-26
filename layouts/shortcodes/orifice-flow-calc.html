@@ -1,0 +1,304 @@
+<div id="orifice-calc-container" style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #dee2e6; margin: 25px 0; color: #333; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+    <h3 style="margin-top:0; border-bottom: 2px solid #2ecc71; padding-bottom: 12px; color: #27ae60;">🎛️ Restriction Orifice Flow Estimator</h3>
+
+    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 0.85em; color: #555; border-left: 4px solid #2ecc71;">
+        • <b>Gas Mode:</b> Uses compressible gas equation with subcritical/choked flow split.<br>
+        • <b>Liquid Mode:</b> Uses incompressible orifice equation (no cavitation/flashing check).<br>
+        • <b>Note:</b> Gas density input must be <u>upstream actual density at P1/T1</u>.
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; align-items: start;">
+        <div style="background: #fdfdfd; padding: 15px; border: 1px solid #eee; border-radius: 8px;">
+            <h4 style="margin-top: 0; color: #2c3e50; font-size: 1em;">Fluid Data</h4>
+
+            <label style="font-weight:bold; font-size: 0.85em; color: #444;">Fluid Phase</label>
+            <select id="of_phase" onchange="togglePhase()" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px; outline: none;">
+                <option value="gas">Gas (Compressible)</option>
+                <option value="liquid">Liquid (Incompressible)</option>
+            </select>
+
+            <label style="font-weight:bold; font-size: 0.85em; color: #444;">Upstream Pressure P1 (bar abs)</label>
+            <input type="number" id="of_p1" value="75.54" step="any" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+
+            <label style="font-weight:bold; font-size: 0.85em; color: #444;">Downstream Pressure P2 (bar abs)</label>
+            <input type="number" id="of_p2" value="19.15" step="any" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+
+            <label style="font-weight:bold; font-size: 0.85em; color: #444;">Density at P1 (kg/m³)</label>
+            <input type="number" id="of_rho" value="10.73" step="any" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+
+            <label style="font-weight:bold; font-size: 0.85em; color: #444;">Dynamic Viscosity (cP, optional for Re only)</label>
+            <input type="number" id="of_mu" value="0.012" step="any" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+
+            <div id="div_kappa">
+                <label style="font-weight:bold; font-size: 0.85em; color: #444;">Ratio of Specific Heats, k = Cp/Cv</label>
+                <input type="number" id="of_kappa" value="1.37" step="any" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+            </div>
+        </div>
+
+        <div style="background: #fdfdfd; padding: 15px; border: 1px solid #eee; border-radius: 8px;">
+            <h4 style="margin-top: 0; color: #2c3e50; font-size: 1em;">Instrument Data</h4>
+
+            <label style="font-weight:bold; font-size: 0.85em; color: #444;">Pipe Inner Diameter D (mm)</label>
+            <input type="number" id="of_D" value="152.4" step="any" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+
+            <label style="font-weight:bold; font-size: 0.85em; color: #444;">Orifice Bore Diameter d (mm)</label>
+            <input type="number" id="of_d" value="15.24" step="any" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+
+            <label style="font-weight:bold; font-size: 0.85em; color: #444;">Discharge Coefficient (Cd)</label>
+            <input type="number" id="of_cd" value="0.62" step="any" title="Typically ~0.62 for sharp-edged orifices in turbulent flow" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+        </div>
+    </div>
+
+    <button id="btn-calc-orifice" style="background: #27ae60; color: white; border: none; padding: 14px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; font-size: 1.05em; transition: 0.2s;">Calculate Flow</button>
+
+    <div id="orifice-result" style="margin-top: 25px; display:none;">
+        <h4 style="border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Calculation Results</h4>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em; border: 1px solid #dee2e6;">
+                <tbody id="res-table-left" style="background: white;"></tbody>
+            </table>
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em; border: 1px solid #dee2e6;">
+                <tbody id="res-table-right" style="background: white;"></tbody>
+            </table>
+        </div>
+
+        <div id="of-choke-warning" style="display:none; color: #721c24; background: #f8d7da; padding: 10px; margin-top: 20px; font-size: 1em; border-radius: 6px; text-align: center; font-weight: bold; border: 1px solid #f5c6cb;">
+            🚨 Choked flow detected. Gas flow is limited by sonic condition at the vena contracta / throat model.
+        </div>
+
+        <div style="background: #fdfae8; border-left: 4px solid #f1c40f; padding: 12px; margin-top: 20px; font-size: 0.8em; color: #7f8c8d; line-height: 1.5;">
+            <b>⚠️ Engineering Disclaimer</b><br>
+            * Gas mode uses a simplified ideal-gas style compressible restriction/orifice approach based on upstream density and k.<br>
+            * It is much more consistent than the original DP-capped incompressible form, but still not a full ISO 5167 / vendor sizing package.<br>
+            * Liquid mode does not check cavitation, flashing, or choked liquid flow.<br>
+            * Use for preliminary engineering estimation only.
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const btnCalcOrifice = document.getElementById('btn-calc-orifice');
+    if (btnCalcOrifice) {
+        btnCalcOrifice.addEventListener('click', calculateOrifice);
+    }
+
+    function togglePhase() {
+        const phase = document.getElementById('of_phase').value;
+        document.getElementById('div_kappa').style.display = (phase === 'gas') ? 'block' : 'none';
+        document.getElementById('orifice-result').style.display = 'none';
+    }
+
+    function fmt(val, digits = 3) {
+        return Number.isFinite(val) ? Number(val).toFixed(digits) : "-";
+    }
+
+    function parseNum(id) {
+        return parseFloat(document.getElementById(id).value);
+    }
+
+    function requireFinitePositive(name, value, allowZero = false) {
+        if (!Number.isFinite(value)) {
+            throw new Error(`${name} is required.`);
+        }
+        if (allowZero) {
+            if (value < 0) throw new Error(`${name} cannot be negative.`);
+        } else {
+            if (value <= 0) throw new Error(`${name} must be greater than zero.`);
+        }
+    }
+
+    function calculateGasMassFlow(params) {
+        const {
+            P1, P2, rho1, kappa, Cd, areaOrif, beta4, E
+        } = params;
+
+        // Ideal-gas style relation using upstream density:
+        // m_dot = Cd * E * A * sqrt( 2 * rho1 * P1 * [k/(k-1)] * ( r^(2/k) - r^((k+1)/k) ) )
+        // Critical:
+        // m_dot = Cd * E * A * sqrt( rho1 * P1 * k * (2/(k+1))^((k+1)/(k-1)) )
+        //
+        // where r = P2/P1
+        const r = P2 / P1;
+        const criticalPR = Math.pow(2 / (kappa + 1), kappa / (kappa - 1));
+        const isChoked = r <= criticalPR;
+
+        let qm = NaN;
+        let effectiveP2 = P2;
+        let effectiveDP = P1 - P2;
+        let calcMode = "Subcritical compressible";
+
+        if (isChoked) {
+            qm = Cd * E * areaOrif * Math.sqrt(
+                rho1 * P1 * kappa * Math.pow(2 / (kappa + 1), (kappa + 1) / (kappa - 1))
+            );
+            effectiveP2 = P1 * criticalPR;
+            effectiveDP = P1 - effectiveP2;
+            calcMode = "Choked compressible";
+        } else {
+            const bracket = Math.pow(r, 2 / kappa) - Math.pow(r, (kappa + 1) / kappa);
+            qm = Cd * E * areaOrif * Math.sqrt(
+                2 * rho1 * P1 * (kappa / (kappa - 1)) * bracket
+            );
+        }
+
+        // For display only: Crane-style expansibility factor estimated against incompressible form
+        let epsDisplay = 1 - (0.41 + 0.35 * beta4) * ((effectiveDP / P1) / kappa);
+        if (!Number.isFinite(epsDisplay)) epsDisplay = NaN;
+        epsDisplay = Math.max(0, Math.min(1, epsDisplay));
+
+        return {
+            qm,
+            isChoked,
+            criticalPR,
+            effectiveP2,
+            effectiveDP,
+            epsDisplay,
+            calcMode
+        };
+    }
+
+    function calculateLiquidMassFlow(params) {
+        const {
+            P1, P2, rho1, Cd, areaOrif, E
+        } = params;
+
+        const dP = P1 - P2;
+        const qm = Cd * E * areaOrif * Math.sqrt(2 * rho1 * dP);
+
+        return {
+            qm,
+            isChoked: false,
+            criticalPR: NaN,
+            effectiveP2: P2,
+            effectiveDP: dP,
+            epsDisplay: 1,
+            calcMode: "Incompressible liquid"
+        };
+    }
+
+    function calculateOrifice() {
+        try {
+            const phase = document.getElementById('of_phase').value;
+
+            const P1_bar = parseNum('of_p1');
+            const P2_bar = parseNum('of_p2');
+            const rho = parseNum('of_rho');
+            const mu_cP = parseNum('of_mu');
+            const D_mm = parseNum('of_D');
+            const d_mm = parseNum('of_d');
+            const Cd = parseNum('of_cd');
+            const kappa = parseNum('of_kappa');
+
+            requireFinitePositive('Upstream pressure P1', P1_bar);
+            requireFinitePositive('Downstream pressure P2', P2_bar, true);
+            requireFinitePositive('Density at P1', rho);
+            requireFinitePositive('Pipe diameter D', D_mm);
+            requireFinitePositive('Orifice diameter d', d_mm);
+            requireFinitePositive('Discharge coefficient Cd', Cd);
+
+            if (phase === 'gas') {
+                requireFinitePositive('Specific heat ratio k', kappa);
+                if (kappa <= 1) throw new Error('Specific heat ratio k must be greater than 1 for gas mode.');
+            }
+
+            if (P2_bar > P1_bar) {
+                throw new Error('Downstream pressure P2 cannot be greater than upstream pressure P1.');
+            }
+            if (d_mm >= D_mm) {
+                throw new Error('Orifice diameter d must be strictly less than pipe diameter D.');
+            }
+            if (Cd > 1.0) {
+                throw new Error('Cd should normally be less than or equal to 1.0.');
+            }
+
+            // SI conversions
+            const P1 = P1_bar * 100000; // Pa
+            const P2 = P2_bar * 100000; // Pa
+            const D = D_mm / 1000;      // m
+            const d = d_mm / 1000;      // m
+            const mu = Number.isFinite(mu_cP) && mu_cP > 0 ? mu_cP / 1000 : NaN; // Pa.s
+
+            const beta = d / D;
+            const beta2 = beta * beta;
+            const beta4 = beta2 * beta2;
+            const areaOrif = (Math.PI / 4) * d * d;
+            const areaPipe = (Math.PI / 4) * D * D;
+            const E = 1 / Math.sqrt(1 - beta4); // velocity of approach factor
+
+            const common = {
+                P1,
+                P2,
+                rho1: rho,
+                kappa,
+                Cd,
+                areaOrif,
+                areaPipe,
+                beta,
+                beta4,
+                E
+            };
+
+            const result = (phase === 'gas')
+                ? calculateGasMassFlow(common)
+                : calculateLiquidMassFlow(common);
+
+            const qm = result.qm;
+            const qm_h = qm * 3600;
+            const qvActual_h = (qm / rho) * 3600; // upstream actual volumetric flow
+            const vp = (qm / rho) / areaPipe;     // upstream actual velocity in line
+            const ReD = (Number.isFinite(mu) && mu > 0)
+                ? (4 * qm) / (Math.PI * D * mu)
+                : NaN;
+
+            const flowRegime = Number.isFinite(ReD)
+                ? (ReD > 4000 ? 'Turbulent' : (ReD < 2000 ? 'Laminar' : 'Transitional'))
+                : 'N/A (viscosity not provided)';
+
+            const PR_actual = P2 / P1;
+            const DP_actual = P1 - P2;
+            const DP_ratio_actual = DP_actual / P1;
+            const effectivePR = result.effectiveP2 / P1;
+            const effectiveDP_bar = result.effectiveDP / 100000;
+
+            const rowStyle = "border-bottom: 1px solid #eee;";
+            const cellTitle = "padding: 8px; font-weight: bold; background: #fafafa; color: #333;";
+            const cellVal = "padding: 8px; text-align: right; font-family: monospace; font-size: 1.05em; color: #2980b9;";
+            const cellValGreen = "padding: 8px; text-align: right; font-family: monospace; font-size: 1.05em; color: #27ae60;";
+
+            document.getElementById('res-table-left').innerHTML = `
+                <tr style="${rowStyle}"><td style="${cellTitle}">Calculation Mode</td><td style="${cellValGreen}">${result.calcMode}</td></tr>
+                <tr style="${rowStyle}"><td style="${cellTitle}">Actual DP [bar]</td><td style="${cellVal}">${fmt(DP_actual / 100000, 3)}</td></tr>
+                <tr style="${rowStyle}"><td style="${cellTitle}">Actual DP Ratio</td><td style="${cellVal}">${fmt(DP_ratio_actual, 5)}</td></tr>
+                <tr style="${rowStyle}"><td style="${cellTitle}">Actual Pressure Ratio (P2/P1)</td><td style="${cellVal}">${fmt(PR_actual, 5)}</td></tr>
+                <tr style="${rowStyle}"><td style="${cellTitle}">Effective DP Used [bar]</td><td style="${cellVal}">${fmt(effectiveDP_bar, 3)}</td></tr>
+                <tr style="${rowStyle}"><td style="${cellTitle}">Effective Pressure Ratio</td><td style="${cellVal}">${fmt(effectivePR, 5)}</td></tr>
+                <tr style="${rowStyle}"><td style="${cellTitle}">Critical Pressure Ratio</td><td style="${cellVal}">${phase === 'gas' ? fmt(result.criticalPR, 5) : 'N/A'}</td></tr>
+                <tr style="${rowStyle}"><td style="${cellTitle}">Beta Ratio (d/D)</td><td style="${cellVal}">${fmt(beta, 5)}</td></tr>
+                <tr><td style="${cellTitle}">Expansibility Factor (display)</td><td style="${cellVal}">${phase === 'gas' ? fmt(result.epsDisplay, 5) : '1.00000'}</td></tr>
+            `;
+
+            document.getElementById('res-table-right').innerHTML = `
+                <tr style="${rowStyle}"><td style="${cellTitle}">Mass Flow [kg/s]</td><td style="${cellVal}">${fmt(qm, 6)}</td></tr>
+                <tr style="${rowStyle}"><td style="${cellTitle}">Mass Flow [kg/h]</td><td style="${cellVal}; font-weight:bold;">${fmt(qm_h, 2)}</td></tr>
+                <tr style="${rowStyle}"><td style="${cellTitle}">Upstream Actual Vol. Flow [m³/h]</td><td style="${cellVal}">${fmt(qvActual_h, 3)}</td></tr>
+                <tr style="${rowStyle}"><td style="${cellTitle}">Upstream Line Velocity [m/s]</td><td style="${cellVal}">${fmt(vp, 3)}</td></tr>
+                <tr style="${rowStyle}"><td style="${cellTitle}">Velocity of Approach Factor E</td><td style="${cellVal}">${fmt(E, 5)}</td></tr>
+                <tr style="${rowStyle}"><td style="${cellTitle}">Reynolds Number (Line)</td><td style="${cellVal}">${Number.isFinite(ReD) ? fmt(ReD, 1) : 'N/A'}</td></tr>
+                <tr><td style="${cellTitle}">Flow Regime</td><td style="${cellValGreen}">${flowRegime}</td></tr>
+            `;
+
+            document.getElementById('of-choke-warning').style.display =
+                (phase === 'gas' && result.isChoked) ? 'block' : 'none';
+
+            document.getElementById('orifice-result').style.display = 'block';
+        } catch (err) {
+            alert(err.message || 'Calculation failed.');
+            document.getElementById('orifice-result').style.display = 'none';
+        }
+    }
+
+    togglePhase();
+})();
+</script>
