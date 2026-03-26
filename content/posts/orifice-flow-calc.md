@@ -21,9 +21,11 @@ This browser-based estimator provides preliminary mass-flow and upstream actual 
 ## 🚨 Engineering Limitations & Disclaimer
 
 Before using the estimates provided by this tool, please note the following critical boundaries:
-* **Gas Density Input:** The gas density provided must be the **upstream actual density** at the specific operating pressure (P1) and temperature (T1).
-* **Phase Changes & Two-Phase Flow:** The liquid model assumes strict incompressibility and **does not cover cavitation, flashing, or two-phase flow** phenomena.
-* **Scope of Use:** This tool is strictly intended for conceptual design and preliminary engineering estimations. It is **not** for final detailed design, custody transfer metering, or certified safety relief (PSV/BDV) sizing.
+* **Gas Density Calculation:** For gases, the tool calculates upstream actual density from $P_1$, $T_1$, $MW$, and $Z$. Ensure $P_1$ is entered as absolute pressure, and $Z$ is evaluated at the specific inlet relieving condition. 
+* **Volumetric Flow:** Reported volumetric flow is strictly based on upstream actual density. It should **not** be interpreted as standard/normal flow ($Sm^3/h$, $Nm^3/h$) or downstream actual flow.
+* **Velocity of Approach (E):** Applying the incompressible velocity-of-approach factor (E) to the compressible isentropic equations is a pragmatic approximation used in this estimator. It is not a rigorous application of standard compressible metering formulas.
+* **Discharge Coefficient ($C_d$):** The discharge coefficient is strictly a user-specified constant and is **not** dynamically correlated to the Reynolds number.
+* **Scope of Use:** This tool is intended for conceptual design and preliminary estimations only. It is **not** for final detailed design, custody transfer, or certified safety relief sizing.
 
 ## 📘 Technical Background & Equations
 
@@ -54,8 +56,8 @@ The flow is not limited by the speed of sound. The mass flow is calculated as:
 qm = Cd * E * A * sqrt( 2 * rho1 * P1 * [k / (k - 1)] * [ r^(2/k) - r^((k+1)/k) ] )
 
 **B. Choked (Sonic) Flow (r <= rc):**
-When the flow reaches sonic conditions at the controlling section, the mass flow is evaluated using the critical-flow form. Further lowering the downstream pressure (P2) will not increase the flow rate:
+When the flow reaches sonic conditions at the controlling section, the mass flow is evaluated using the critical-flow form. Further lowering the downstream pressure (P2) will not increase the mass flow rate:
 
 qm = Cd * E * A * sqrt( rho1 * P1 * k * [ 2 / (k + 1) ]^[ (k+1) / (k-1) ] )
 
-*(The estimator will display a warning flag and show the "Effective DP" used for this choked condition.)*
+*(The estimator will display a warning flag if choked conditions are reached, and the actual calculations will rely on the critical limit.)*
