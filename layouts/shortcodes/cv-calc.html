@@ -1,0 +1,210 @@
+<div id="cv-calc-container" style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #dee2e6; margin: 25px 0; color: #333; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+    <h3 style="margin-top:0; border-bottom: 2px solid #3498db; padding-bottom: 12px; color: #2980b9;">🎛️ Control Valve Cv Calculator (IEC 60534)</h3>
+
+    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 0.85em; color: #555; border-left: 4px solid #3498db;">
+        • <b>Liquid:</b> Non-vaporizing liquid flow sizing.<br>
+        • <b>Gas/Vapor:</b> Compressible flow with choked flow (sonic) limitation handling.
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; align-items: start;">
+        <div style="background: #fdfdfd; padding: 15px; border: 1px solid #eee; border-radius: 8px;">
+            <h4 style="margin-top: 0; color: #2c3e50; font-size: 1em;">Fluid Conditions</h4>
+
+            <label style="font-weight:bold; font-size: 0.85em; color: #444;">Fluid Phase</label>
+            <select id="cv_phase" onchange="toggleCvPhase()" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; outline: none;">
+                <option value="liquid">Liquid (Non-vaporizing)</option>
+                <option value="gas">Gas / Vapor</option>
+            </select>
+
+            <label style="font-weight:bold; font-size: 0.85em; color: #444;">Mass Flow Rate W (kg/hr)</label>
+            <input type="number" id="cv_W" value="1000" step="any" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+
+            <label style="font-weight:bold; font-size: 0.85em; color: #444;">Upstream Pressure P1 (bar abs)</label>
+            <input type="number" id="cv_p1" value="10.0" step="any" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+
+            <label style="font-weight:bold; font-size: 0.85em; color: #444;">Downstream Pressure P2 (bar abs)</label>
+            <input type="number" id="cv_p2" value="5.0" step="any" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px;">
+
+            <div id="div_cv_liquid">
+                <label style="font-weight:bold; font-size: 0.85em; color: #444;">Fluid Density ρ1 (kg/m³)</label>
+                <input type="number" id="cv_rho" value="998" step="any" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+            </div>
+
+            <div id="div_cv_gas" style="display:none;">
+                <label style="font-weight:bold; font-size: 0.85em; color: #444;">Inlet Temperature T1 (°C)</label>
+                <input type="number" id="cv_t1" value="20" step="any" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+
+                <label style="font-weight:bold; font-size: 0.85em; color: #444;">Molecular Weight M (g/mol)</label>
+                <input type="number" id="cv_mw" value="28.97" step="any" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+
+                <label style="font-weight:bold; font-size: 0.85em; color: #444;">Compressibility Factor Z</label>
+                <input type="number" id="cv_z" value="1.0" step="any" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+
+                <label style="font-weight:bold; font-size: 0.85em; color: #444;">Specific Heat Ratio k</label>
+                <input type="number" id="cv_k" value="1.4" step="any" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+            </div>
+        </div>
+
+        <div style="background: #fdfdfd; padding: 15px; border: 1px solid #eee; border-radius: 8px;">
+            <h4 style="margin-top: 0; color: #2c3e50; font-size: 1em;">Valve Parameters</h4>
+
+            <label style="font-weight:bold; font-size: 0.85em; color: #444;">Piping Geometry Factor (Fp)</label>
+            <input type="number" id="cv_fp" value="1.0" step="any" title="Default 1.0 if pipe and valve size are the same" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+
+            <div id="div_cv_xt" style="display:none;">
+                <label style="font-weight:bold; font-size: 0.85em; color: #444;">Critical Pressure Drop Ratio (xT)</label>
+                <input type="number" id="cv_xt" value="0.70" step="any" title="e.g., ~0.70 for Globe valves, ~0.20-0.50 for Butterfly/Ball valves" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px;">
+            </div>
+        </div>
+    </div>
+
+    <button id="btn-calc-cv" style="background: #3498db; color: white; border: none; padding: 14px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; font-size: 1.05em; transition: 0.2s;">Calculate Required Cv</button>
+
+    <div id="cv-result" style="margin-top: 25px; display:none;">
+        <div style="background: #e1f5fe; border: 2px solid #2980b9; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 20px;">
+            <span style="font-size: 1.1em; color: #2c3e50; font-weight: bold;">Required Valve Capacity (Cv)</span><br>
+            <span id="res_cv_main" style="font-size: 2.5em; color: #2980b9; font-weight: bold; font-family: monospace;">-</span>
+        </div>
+
+        <h4 style="border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Intermediate Results</h4>
+        
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9em; border: 1px solid #dee2e6; margin-bottom: 15px;">
+            <tbody id="cv-res-table" style="background: white;"></tbody>
+        </table>
+
+        <div id="cv-choke-warning" style="display:none; color: #721c24; background: #f8d7da; padding: 10px; font-size: 1em; border-radius: 6px; text-align: center; font-weight: bold; border: 1px solid #f5c6cb;">
+            🚨 Choked flow detected (x ≥ Fk·xT). Flow is limited by sonic velocity.
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const btnCalcCv = document.getElementById('btn-calc-cv');
+    if (btnCalcCv) {
+        btnCalcCv.addEventListener('click', calculateCv);
+    }
+
+    window.toggleCvPhase = function() {
+        const phase = document.getElementById('cv_phase').value;
+        document.getElementById('div_cv_liquid').style.display = (phase === 'liquid') ? 'block' : 'none';
+        document.getElementById('div_cv_gas').style.display = (phase === 'gas') ? 'block' : 'none';
+        document.getElementById('div_cv_xt').style.display = (phase === 'gas') ? 'block' : 'none';
+        document.getElementById('cv-result').style.display = 'none';
+
+        // Set reasonable default mass flows for phase switch
+        const wEl = document.getElementById('cv_W');
+        if (phase === 'gas' && wEl.value === "1000") wEl.value = "500";
+        if (phase === 'liquid' && wEl.value === "500") wEl.value = "1000";
+    }
+
+    function fmt(val, digits = 3) {
+        return Number.isFinite(val) ? Number(val).toFixed(digits) : "-";
+    }
+
+    function parseNum(id) {
+        return parseFloat(document.getElementById(id).value);
+    }
+
+    function requireFinitePositive(name, value, allowZero = false) {
+        if (!Number.isFinite(value)) throw new Error(`${name} is required.`);
+        if (allowZero) {
+            if (value < 0) throw new Error(`${name} cannot be negative.`);
+        } else {
+            if (value <= 0) throw new Error(`${name} must be greater than zero.`);
+        }
+    }
+
+    function calculateCv() {
+        try {
+            const phase = document.getElementById('cv_phase').value;
+
+            const W = parseNum('cv_W');
+            const P1 = parseNum('cv_p1');
+            const P2 = parseNum('cv_p2');
+            const Fp = parseNum('cv_fp');
+
+            requireFinitePositive('Mass Flow Rate W', W);
+            requireFinitePositive('Upstream Pressure P1', P1);
+            requireFinitePositive('Downstream Pressure P2', P2);
+            requireFinitePositive('Piping Geometry Factor Fp', Fp);
+
+            if (P2 >= P1) throw new Error('Upstream pressure (P1) must be strictly greater than downstream pressure (P2).');
+
+            const dP = P1 - P2;
+            let Cv = NaN;
+            let tableHTML = "";
+            let isChoked = false;
+
+            const rowStyle = "border-bottom: 1px solid #eee;";
+            const cellTitle = "padding: 8px; font-weight: bold; background: #fafafa; color: #333; width: 50%;";
+            const cellVal = "padding: 8px; text-align: right; font-family: monospace; font-size: 1.05em; color: #2980b9;";
+
+            if (phase === 'liquid') {
+                const rho = parseNum('cv_rho');
+                requireFinitePositive('Fluid Density ρ1', rho);
+
+                // Liquid Cv calculation (N6 = 27.3)
+                Cv = W / (27.3 * Fp * Math.sqrt(dP * rho));
+
+                tableHTML = `
+                    <tr style="${rowStyle}"><td style="${cellTitle}">Pressure Drop (ΔP) [bar]</td><td style="${cellVal}">${fmt(dP, 3)}</td></tr>
+                    <tr style="${rowStyle}"><td style="${cellTitle}">Calculated Condition</td><td style="${cellVal} color:#27ae60;">Non-vaporizing Liquid</td></tr>
+                `;
+            } else {
+                const T1_C = parseNum('cv_t1');
+                const M = parseNum('cv_mw');
+                const Z = parseNum('cv_z');
+                const k = parseNum('cv_k');
+                const xT = parseNum('cv_xt');
+
+                if (!Number.isFinite(T1_C)) throw new Error('Inlet Temperature T1 is required.');
+                const T1_K = T1_C + 273.15;
+                if (T1_K <= 0) throw new Error('Inlet Temperature is below absolute zero.');
+                
+                requireFinitePositive('Molecular Weight M', M);
+                requireFinitePositive('Compressibility Factor Z', Z);
+                if (Z <= 0 || Z > 2) throw new Error('Z factor must be between 0 and 2.');
+                requireFinitePositive('Specific Heat Ratio k', k);
+                requireFinitePositive('Pressure Drop Ratio xT', xT);
+
+                const x = dP / P1;
+                const Fk = k / 1.40;
+                const x_limit = Fk * xT;
+
+                let x_calc = x;
+                if (x >= x_limit) {
+                    isChoked = true;
+                    x_calc = x_limit;
+                }
+
+                const Y = 1 - (x_calc / (3 * Fk * xT));
+
+                // Gas/Vapor Cv calculation (N8 = 94.8)
+                Cv = (W / (94.8 * Fp * P1 * Y)) * Math.sqrt((T1_K * Z) / (M * x_calc));
+
+                tableHTML = `
+                    <tr style="${rowStyle}"><td style="${cellTitle}">Pressure Drop (ΔP) [bar]</td><td style="${cellVal}">${fmt(dP, 3)}</td></tr>
+                    <tr style="${rowStyle}"><td style="${cellTitle}">Actual Press. Drop Ratio (x)</td><td style="${cellVal}">${fmt(x, 4)}</td></tr>
+                    <tr style="${rowStyle}"><td style="${cellTitle}">Specific Heat Ratio Factor (Fk)</td><td style="${cellVal}">${fmt(Fk, 4)}</td></tr>
+                    <tr style="${rowStyle}"><td style="${cellTitle}">Critical Drop Ratio Limit (Fk·xT)</td><td style="${cellVal}">${fmt(x_limit, 4)}</td></tr>
+                    <tr style="${rowStyle}"><td style="${cellTitle}">Effective Ratio Used (x_calc)</td><td style="${cellVal}; color:${isChoked ? '#e74c3c' : '#2980b9'}; font-weight:bold;">${fmt(x_calc, 4)}</td></tr>
+                    <tr style="${rowStyle}"><td style="${cellTitle}">Expansion Factor (Y)</td><td style="${cellVal}">${fmt(Y, 4)}</td></tr>
+                `;
+            }
+
+            document.getElementById('res_cv_main').innerText = fmt(Cv, 4);
+            document.getElementById('cv-res-table').innerHTML = tableHTML;
+            document.getElementById('cv-choke-warning').style.display = isChoked ? 'block' : 'none';
+            document.getElementById('cv-result').style.display = 'block';
+
+        } catch (err) {
+            alert(err.message || 'Calculation failed.');
+            document.getElementById('cv-result').style.display = 'none';
+        }
+    }
+
+    // Initialize display state
+    window.toggleCvPhase();
+})();
+</script>
