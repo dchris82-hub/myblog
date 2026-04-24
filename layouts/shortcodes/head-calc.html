@@ -7,18 +7,18 @@
             <h4 style="margin-top: 0; color: #2c3e50; font-size: 1em;">Geometry Inputs</h4>
 
             <label style="font-weight:bold; font-size: 0.85em; color: #444;">Inside Diameter D (mm)</label>
-            <input type="number" id="vessel_D" value="1000" placeholder="e.g. 1000" step="any" oninput="calculateHead()" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; font-size: 1em;">
+            <input type="number" id="vessel_D" value="1000" placeholder="Enter diameter..." step="any" oninput="calculateHead()" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; font-size: 1em;">
 
             <label style="font-weight:bold; font-size: 0.85em; color: #444;">Head Type</label>
             <select id="head_type" onchange="calculateHead()" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; outline: none; font-size: 1em;">
                 <option value="hemi">Hemispherical</option>
-                <option value="ellip21" selected>2:1 Ellipsoidal (Minor axis = D/4)</option>
-                <option value="dished10">10% Dished (80-10 Torispherical)</option>
-                <option value="asme">Standard ASME F&D (100-6 Torispherical)</option>
+                <option value="ellip21" selected>2:1 Ellipsoidal (Depth = D/4)</option>
+                <option value="asme">Standard ASME F&D (Rc=1.0D, Rk=0.06D)</option>
+                <option value="dished10">10% Dished (Rc=0.8D, Rk=0.1D)</option>
             </select>
             
             <div id="error_msg" style="display:none; color: #d32f2f; background: #ffebee; padding: 10px; border-radius: 6px; margin-top: 15px; font-size: 0.85em; font-weight: bold; border: 1px solid #ffcdd2;">
-                ⚠️ Please enter a valid Diameter greater than 0.
+                ⚠️ Diameter must be greater than 0.
             </div>
         </div>
 
@@ -29,26 +29,28 @@
         </div>
     </div>
 
-    <div id="svg_container" style="text-align: center; border: 1px dashed #ccc; border-radius: 8px; padding: 10px; background: #fafafa;">
-        <h4 style="margin: 0 0 10px 0; color: #555; font-size: 0.9em;">Shape Profile</h4>
-        <svg id="head_svg" viewBox="0 0 400 220" width="100%" style="max-width: 400px; height: auto;">
+    <div id="svg_container" style="text-align: center; border: 1px dashed #ccc; border-radius: 8px; padding: 15px; background: #fafafa;">
+        <h4 style="margin: 0 0 10px 0; color: #555; font-size: 0.9em;">Mathematical Profile</h4>
+        <svg id="head_svg" viewBox="0 0 400 240" width="100%" style="max-width: 400px; height: auto;">
             <defs>
-                <marker id="arrowHeadStart" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="strokeWidth">
+                <marker id="arrowStart" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="strokeWidth">
                     <path d="M9,0 L0,3 L9,6 z" fill="#555" />
                 </marker>
-                <marker id="arrowHeadEnd" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                <marker id="arrowEnd" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
                     <path d="M0,0 L9,3 L0,6 z" fill="#555" />
                 </marker>
             </defs>
             
-            <path id="head_path" fill="#e1f5fe" stroke="#2980b9" stroke-width="3" d=""></path>
+            <path id="head_path" fill="#e1f5fe" stroke="#2980b9" stroke-width="2.5" d=""></path>
             
-            <line x1="50" y1="180" x2="350" y2="180" stroke="#555" stroke-width="1.5" marker-start="url(#arrowHeadStart)" marker-end="url(#arrowHeadEnd)" />
-            <line x1="50" y1="150" x2="50" y2="190" stroke="#ccc" stroke-dasharray="4" />
-            <line x1="350" y1="150" x2="350" y2="190" stroke="#ccc" stroke-dasharray="4" />
-            
-            <rect x="120" y="170" width="160" height="20" fill="#fafafa"></rect>
-            <text id="dim_text" x="200" y="185" fill="#333" font-size="14" font-weight="bold" text-anchor="middle">Diameter: 1000 mm</text>
+            <g id="dim_group">
+                <line id="dim_line" x1="50" y1="200" x2="350" y2="200" stroke="#555" stroke-width="1.5" marker-start="url(#arrowStart)" marker-end="url(#arrowEnd)" />
+                <line id="dim_drop_L" x1="50" y1="160" x2="50" y2="210" stroke="#aaa" stroke-dasharray="4" />
+                <line id="dim_drop_R" x1="350" y1="160" x2="350" y2="210" stroke="#aaa" stroke-dasharray="4" />
+                
+                <rect x="110" y="190" width="180" height="20" fill="#fafafa"></rect>
+                <text id="dim_text" x="200" y="205" fill="#333" font-size="14" font-weight="bold" text-anchor="middle">Diameter: 1000 mm</text>
+            </g>
         </svg>
     </div>
 </div>
@@ -65,95 +67,126 @@
         const volM3 = document.getElementById('res_vol_m3');
         const svgContainer = document.getElementById('svg_container');
 
-        // Validation & Error Handling
+        // Graceful Error Handling
         if (!D_input || !Number.isFinite(D_mm) || D_mm <= 0) {
             errorMsg.style.display = 'block';
-            volL.innerText = "- Liters";
-            volM3.innerText = "- m³";
-            svgContainer.style.opacity = "0.3";
+            volL.innerText = "-";
+            volM3.innerText = "-";
+            svgContainer.style.opacity = "0.2";
             return;
         }
 
-        // Clear errors
         errorMsg.style.display = 'none';
         svgContainer.style.opacity = "1";
 
-        // Volume Calculation Logic
+        // 1. Volume Calculation
         const D_m = D_mm / 1000;
         const D_m3 = Math.pow(D_m, 3);
         let V_m3 = 0;
 
         switch(headType) {
-            case 'hemi':
-                V_m3 = (Math.PI * D_m3) / 12;
-                break;
-            case 'ellip21':
-                V_m3 = (Math.PI * D_m3) / 24;
-                break;
-            case 'asme':
-                V_m3 = 0.0847 * D_m3;
-                break;
-            case 'dished10':
-                V_m3 = 0.096 * D_m3;
-                break;
+            case 'hemi':      V_m3 = (Math.PI * D_m3) / 12; break;
+            case 'ellip21':   V_m3 = (Math.PI * D_m3) / 24; break;
+            case 'asme':      V_m3 = 0.0847 * D_m3; break;
+            case 'dished10':  V_m3 = 0.096 * D_m3; break;
         }
 
         const V_L = V_m3 * 1000;
 
-        // Dynamic Formatting based on size
-        const fracL = V_L > 1000 ? 0 : (V_L < 10 ? 2 : 1);
+        // Smart formatting
+        const fracL = V_L > 10000 ? 0 : (V_L < 10 ? 2 : 1);
         const fracM3 = V_m3 < 0.1 ? 4 : 2;
 
-        document.getElementById('res_vol_L').innerText = V_L.toLocaleString(undefined, {minimumFractionDigits: fracL, maximumFractionDigits: fracL}) + " L";
-        document.getElementById('res_vol_m3').innerText = V_m3.toLocaleString(undefined, {minimumFractionDigits: fracM3, maximumFractionDigits: fracM3}) + " m³";
+        volL.innerText = V_L.toLocaleString(undefined, {minimumFractionDigits: fracL, maximumFractionDigits: fracL}) + " L";
+        volM3.innerText = V_m3.toLocaleString(undefined, {minimumFractionDigits: fracM3, maximumFractionDigits: fracM3}) + " m³";
         
-        // Update SVG Dimension Text per exact requirement
         document.getElementById('dim_text').innerText = "Diameter: " + D_input + " mm";
 
-        // Draw geometrically accurate SVG
-        drawSVG(headType);
+        // 2. Dynamic SVG Geometry Calculation
+        drawExactGeometry(D_mm, headType);
     }
 
-    function drawSVG(type) {
-        const pathEl = document.getElementById('head_path');
-        // SVG Canvas Width for Vessel is 300 (x: 50 to 350). Base line is at y = 150.
+    function drawExactGeometry(D, type) {
+        // We calculate true physical coordinates in mm, then scale to fit the SVG box
+        // SVG Canvas: width 400. We will map D to a fixed visual width of 300 to leave padding.
+        const visualWidth = 300;
+        const S = visualWidth / D; // Scale factor (pixels per mm)
+        
+        const cx = 200; // Center X of SVG
+        const topY = 30; // Top Y of the head crown
         
         let pathD = "";
-        
+        let depth_mm = 0;
+
         if (type === 'hemi') {
-            // Hemisphere: Depth = R = 150
-            pathD = "M 50,150 A 150 150 0 0 1 350 150";
+            depth_mm = D / 2;
+            pathD = `M ${cx - (D/2)*S},${topY + depth_mm*S} A ${(D/2)*S} ${(D/2)*S} 0 0 1 ${cx + (D/2)*S} ${topY + depth_mm*S}`;
         
         } else if (type === 'ellip21') {
-            // Requirement strict interpretation: Minor axis = D/4.
-            // Therefore, Semi-minor axis (Depth) = D/8. Width = 300, Depth = 300/8 = 37.5.
-            pathD = "M 50,150 A 150 37.5 0 0 1 350 150";
+            // Industry Standard: Depth = D/4
+            depth_mm = D / 4;
+            pathD = `M ${cx - (D/2)*S},${topY + depth_mm*S} A ${(D/2)*S} ${depth_mm*S} 0 0 1 ${cx + (D/2)*S} ${topY + depth_mm*S}`;
         
-        } else if (type === 'asme') {
-            // ASME F&D (100% Crown, 6% Knuckle)
-            // Calculated Tangent points between Rc=300 and Rk=18
-            // T1(x=59.58, y=134.10), T2(x=340.42, y=134.10)
-            pathD = "M 50,150 " + 
-                    "A 18 18 0 0 1 59.58 134.1 " +     // Left Knuckle
-                    "A 300 300 0 0 1 340.42 134.1 " +  // Crown
-                    "A 18 18 0 0 1 350 150";           // Right Knuckle
-        
-        } else if (type === 'dished10') {
-            // 10% Dished (80% Crown, 10% Knuckle)
-            // Calculated Tangent points between Rc=240 and Rk=30
-            // T1(x=62.86, y=125.38), T2(x=337.14, y=125.38)
-            pathD = "M 50,150 " + 
-                    "A 30 30 0 0 1 62.86 125.38 " +    // Left Knuckle
-                    "A 240 240 0 0 1 337.14 125.38 " + // Crown
-                    "A 30 30 0 0 1 350 150";           // Right Knuckle
+        } else {
+            // Mathematical Torispherical Calculation (Crown + Knuckle)
+            let Rc, Rk;
+            if (type === 'asme') {
+                Rc = 1.0 * D;
+                Rk = 0.06 * D;
+            } else { // dished10
+                Rc = 0.8 * D;
+                Rk = 0.1 * D;
+            }
+
+            // Calculate center points and tangent intersections
+            const x_k = (D / 2) - Rk; // Knuckle center X from centerline
+            const center_dist = Rc - Rk; // Distance between Crown center and Knuckle center
+            
+            // Y-depth of the knuckle center (and straight flange tangent line)
+            // Using Pythagoras: center_dist^2 = x_k^2 + (Rc - y_kc)^2
+            const y_kc = Rc - Math.sqrt(Math.pow(center_dist, 2) - Math.pow(x_k, 2));
+            depth_mm = y_kc;
+
+            // Tangent point (Tx, Ty) between Crown and Knuckle
+            const Tx = x_k * (Rc / center_dist);
+            const Ty = Rc - (Rc - y_kc) * (Rc / center_dist);
+
+            // Convert to SVG coordinates
+            const Rk_s = Rk * S;
+            const Rc_s = Rc * S;
+            const Tx_s = Tx * S;
+            const Ty_s = Ty * S;
+            const base_y = topY + depth_mm * S;
+
+            // Draw 3 explicit Arcs: Left Knuckle -> Crown -> Right Knuckle
+            pathD = `M ${cx - (D/2)*S},${base_y} ` + 
+                    `A ${Rk_s} ${Rk_s} 0 0 1 ${cx - Tx_s} ${topY + Ty_s} ` + 
+                    `A ${Rc_s} ${Rc_s} 0 0 1 ${cx + Tx_s} ${topY + Ty_s} ` + 
+                    `A ${Rk_s} ${Rk_s} 0 0 1 ${cx + (D/2)*S} ${base_y}`;
         }
+
+        // Add Straight Flange (visual aid) to close the path
+        const flange_s = 15; // fixed visual length
+        const base_y = topY + depth_mm * S;
+        pathD += ` L ${cx + (visualWidth/2)},${base_y + flange_s} L ${cx - (visualWidth/2)},${base_y + flange_s} Z`;
         
-        // Close the path with a straight flange representation
-        pathD += " L 350,165 L 50,165 Z";
-        pathEl.setAttribute("d", pathD);
+        document.getElementById('head_path').setAttribute("d", pathD);
+
+        // Dynamically adjust dimension lines based on the depth of the head
+        const dimY = base_y + flange_s + 20;
+        document.getElementById('dim_line').setAttribute("y1", dimY);
+        document.getElementById('dim_line').setAttribute("y2", dimY);
+        document.getElementById('dim_text').setAttribute("y", dimY + 5);
+        document.getElementById('dim_text').previousElementSibling.setAttribute("y", dimY - 10);
+        
+        // Adjust drop lines
+        document.getElementById('dim_drop_L').setAttribute("y1", base_y);
+        document.getElementById('dim_drop_L').setAttribute("y2", dimY + 10);
+        document.getElementById('dim_drop_R').setAttribute("y1", base_y);
+        document.getElementById('dim_drop_R').setAttribute("y2", dimY + 10);
     }
 
-    // Initialize on load
+    // Initialize
     calculateHead();
 })();
 </script>
