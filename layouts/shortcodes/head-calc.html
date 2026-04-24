@@ -70,8 +70,8 @@
         // Graceful Error Handling
         if (!D_input || !Number.isFinite(D_mm) || D_mm <= 0) {
             errorMsg.style.display = 'block';
-            volL.innerText = "-";
-            volM3.innerText = "-";
+            volL.textContent = "-";
+            volM3.textContent = "-";
             svgContainer.style.opacity = "0.2";
             return;
         }
@@ -97,23 +97,22 @@
         const fracL = V_L > 10000 ? 0 : (V_L < 10 ? 2 : 1);
         const fracM3 = V_m3 < 0.1 ? 4 : 2;
 
-        volL.innerText = V_L.toLocaleString(undefined, {minimumFractionDigits: fracL, maximumFractionDigits: fracL}) + " L";
-        volM3.innerText = V_m3.toLocaleString(undefined, {minimumFractionDigits: fracM3, maximumFractionDigits: fracM3}) + " m³";
+        volL.textContent = V_L.toLocaleString(undefined, {minimumFractionDigits: fracL, maximumFractionDigits: fracL}) + " L";
+        volM3.textContent = V_m3.toLocaleString(undefined, {minimumFractionDigits: fracM3, maximumFractionDigits: fracM3}) + " m³";
         
-        document.getElementById('dim_text').innerText = "Diameter: " + D_input + " mm";
+        // [CRITICAL FIX]: Use textContent instead of innerText for SVG elements
+        document.getElementById('dim_text').textContent = "Diameter: " + D_input + " mm";
 
         // 2. Dynamic SVG Geometry Calculation
         drawExactGeometry(D_mm, headType);
     }
 
     function drawExactGeometry(D, type) {
-        // We calculate true physical coordinates in mm, then scale to fit the SVG box
-        // SVG Canvas: width 400. We will map D to a fixed visual width of 300 to leave padding.
         const visualWidth = 300;
-        const S = visualWidth / D; // Scale factor (pixels per mm)
+        const S = visualWidth / D; 
         
-        const cx = 200; // Center X of SVG
-        const topY = 30; // Top Y of the head crown
+        const cx = 200; 
+        const topY = 30; 
         
         let pathD = "";
         let depth_mm = 0;
@@ -123,70 +122,58 @@
             pathD = `M ${cx - (D/2)*S},${topY + depth_mm*S} A ${(D/2)*S} ${(D/2)*S} 0 0 1 ${cx + (D/2)*S} ${topY + depth_mm*S}`;
         
         } else if (type === 'ellip21') {
-            // Industry Standard: Depth = D/4
             depth_mm = D / 4;
             pathD = `M ${cx - (D/2)*S},${topY + depth_mm*S} A ${(D/2)*S} ${depth_mm*S} 0 0 1 ${cx + (D/2)*S} ${topY + depth_mm*S}`;
         
         } else {
-            // Mathematical Torispherical Calculation (Crown + Knuckle)
             let Rc, Rk;
             if (type === 'asme') {
                 Rc = 1.0 * D;
                 Rk = 0.06 * D;
-            } else { // dished10
+            } else { 
                 Rc = 0.8 * D;
                 Rk = 0.1 * D;
             }
 
-            // Calculate center points and tangent intersections
-            const x_k = (D / 2) - Rk; // Knuckle center X from centerline
-            const center_dist = Rc - Rk; // Distance between Crown center and Knuckle center
+            const x_k = (D / 2) - Rk; 
+            const center_dist = Rc - Rk; 
             
-            // Y-depth of the knuckle center (and straight flange tangent line)
-            // Using Pythagoras: center_dist^2 = x_k^2 + (Rc - y_kc)^2
             const y_kc = Rc - Math.sqrt(Math.pow(center_dist, 2) - Math.pow(x_k, 2));
             depth_mm = y_kc;
 
-            // Tangent point (Tx, Ty) between Crown and Knuckle
             const Tx = x_k * (Rc / center_dist);
             const Ty = Rc - (Rc - y_kc) * (Rc / center_dist);
 
-            // Convert to SVG coordinates
             const Rk_s = Rk * S;
             const Rc_s = Rc * S;
             const Tx_s = Tx * S;
             const Ty_s = Ty * S;
             const base_y = topY + depth_mm * S;
 
-            // Draw 3 explicit Arcs: Left Knuckle -> Crown -> Right Knuckle
             pathD = `M ${cx - (D/2)*S},${base_y} ` + 
                     `A ${Rk_s} ${Rk_s} 0 0 1 ${cx - Tx_s} ${topY + Ty_s} ` + 
                     `A ${Rc_s} ${Rc_s} 0 0 1 ${cx + Tx_s} ${topY + Ty_s} ` + 
                     `A ${Rk_s} ${Rk_s} 0 0 1 ${cx + (D/2)*S} ${base_y}`;
         }
 
-        // Add Straight Flange (visual aid) to close the path
-        const flange_s = 15; // fixed visual length
+        const flange_s = 15; 
         const base_y = topY + depth_mm * S;
         pathD += ` L ${cx + (visualWidth/2)},${base_y + flange_s} L ${cx - (visualWidth/2)},${base_y + flange_s} Z`;
         
         document.getElementById('head_path').setAttribute("d", pathD);
 
-        // Dynamically adjust dimension lines based on the depth of the head
         const dimY = base_y + flange_s + 20;
         document.getElementById('dim_line').setAttribute("y1", dimY);
         document.getElementById('dim_line').setAttribute("y2", dimY);
         document.getElementById('dim_text').setAttribute("y", dimY + 5);
         document.getElementById('dim_text').previousElementSibling.setAttribute("y", dimY - 10);
         
-        // Adjust drop lines
         document.getElementById('dim_drop_L').setAttribute("y1", base_y);
         document.getElementById('dim_drop_L').setAttribute("y2", dimY + 10);
         document.getElementById('dim_drop_R').setAttribute("y1", base_y);
         document.getElementById('dim_drop_R').setAttribute("y2", dimY + 10);
     }
 
-    // Initialize
     calculateHead();
 })();
 </script>
